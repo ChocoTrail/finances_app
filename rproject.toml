@@ -8,6 +8,7 @@ repositories = [
 
 dependencies = [
   "DBI",
+  "dbplyr",
   "digest",
   "dplyr",
   "duckdb",

@@ -66,6 +66,16 @@ dependencies = [
 ]
 
 [[packages]]
+name = "blob"
+version = "1.3.0"
+source = { repository = "https://packagemanager.posit.co/cran/latest" }
+force_source = false
+dependencies = [
+    "rlang",
+    { name = "vctrs", requirement = "(>= 0.2.1)" },
+]
+
+[[packages]]
 name = "brio"
 version = "1.1.5"
 source = { repository = "https://packagemanager.posit.co/cran/latest" }
@@ -153,6 +163,30 @@ version = "8.0.0"
 source = { repository = "https://packagemanager.posit.co/cran/latest" }
 force_source = false
 dependencies = []
+
+[[packages]]
+name = "dbplyr"
+version = "2.6.0"
+source = { repository = "https://packagemanager.posit.co/cran/latest" }
+force_source = false
+dependencies = [
+    { name = "blob", requirement = "(>= 1.2.0)" },
+    { name = "cli", requirement = "(>= 3.6.1)" },
+    { name = "DBI", requirement = "(>= 1.1.3)" },
+    { name = "dplyr", requirement = "(>= 1.1.2)" },
+    { name = "glue", requirement = "(>= 1.6.2)" },
+    { name = "lifecycle", requirement = "(>= 1.0.3)" },
+    "magrittr",
+    { name = "pillar", requirement = "(>= 1.9.0)" },
+    { name = "purrr", requirement = "(>= 1.0.1)" },
+    { name = "R6", requirement = "(>= 2.2.2)" },
+    { name = "rlang", requirement = "(>= 1.1.1)" },
+    { name = "tibble", requirement = "(>= 3.2.1)" },
+    { name = "tidyr", requirement = "(>= 1.3.0)" },
+    { name = "tidyselect", requirement = "(>= 1.2.1)" },
+    { name = "vctrs", requirement = "(>= 0.6.3)" },
+    { name = "withr", requirement = "(>= 2.5.0)" },
+]
 
 [[packages]]
 name = "desc"

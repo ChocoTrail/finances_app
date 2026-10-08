@@ -184,11 +184,24 @@ atomic save is allowed.
 ## Deployment
 
 Posit Connect Cloud deploys the committed R application and built client
-assets from `manifest.json`; it does not need Node during deployment. Before
-regenerating the manifest, use an R version supported by Connect Cloud, restore
-the locked dependencies, rebuild the client, and run the complete test suite.
-Create the manifest with an explicit runtime file list so private data, tests,
-and local development files cannot be uploaded.
+assets from `manifest.json`; it does not need Node during deployment. Restore
+the locked `rv` environment, rebuild the client, and run the complete test
+suite before regenerating the manifest:
+
+```sh
+rv sync --locked
+npm run check
+npm run build
+Rscript scripts/write_manifest.R
+```
+
+The generator exports the locked `rv` environment to `renv.lock` as deployment
+metadata, then creates the manifest from that exact package set. `rv` remains
+the project environment manager; do not edit the generated `renv.lock` by
+hand. The explicit runtime file list prevents private data, tests, publishing
+tools, and local development files from being uploaded. Regenerate and commit
+both deployment artifacts whenever a runtime file, runtime asset, or package
+dependency changes.
 
 Configure these environment variables in the deployed content settings:
 
