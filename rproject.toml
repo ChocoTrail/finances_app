@@ -1,0 +1,25 @@
+[project]
+name = "finances_app"
+r_version = "4.6"
+
+repositories = [
+  { alias = "PPM", url = "https://packagemanager.posit.co/cran/latest" },
+]
+
+dependencies = [
+  "DBI",
+  "digest",
+  "dplyr",
+  "duckdb",
+  "jsonlite",
+  "lubridate",
+  "purrr",
+  "readr",
+  "rsconnect",
+  "shiny",
+  { name = "shinyreact", git = "https://github.com/posit-dev/shinyreact", commit = "e8812353d5f076f6e98a27a7e210d0a3e177ea1d", directory = "pkg-r" },
+  "stringr",
+  "testthat",
+  "tibble",
+  "tidyr",
+]

@@ -17,6 +17,17 @@ driver details.
 
 ## Current workflow
 
+The R environment is managed by `rv`. Restore the exact project library from
+the committed lock file before running the application or its scripts:
+
+```sh
+rv sync --locked
+```
+
+Declare direct dependencies in `rproject.toml`; do not install packages into a
+shared user library for this project. The pinned `shinyreact` Git revision is
+restored into the isolated `rv` library with the other dependencies.
+
 1. Place the three account exports in `data/raw/`.
 2. Run `scripts/02_build_transactions.R` from the project root.
 3. Confirm the account-level transaction counts before continuing.
