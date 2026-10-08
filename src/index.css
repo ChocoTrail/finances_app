@@ -29,6 +29,8 @@
   --current-soft: #dce8e7;
   --warning: #7a5b22;
   --warning-soft: #eee4cf;
+  --success: #42634a;
+  --success-soft: #e1e8de;
   --error: #a24e3f;
   --error-soft: #f0dcd8;
 }
@@ -121,6 +123,20 @@ footer {
 .site-header nav button[aria-current="page"] {
   border-bottom-color: var(--current);
   color: var(--ink);
+}
+
+.nav-count {
+  display: inline-grid;
+  min-width: 19px;
+  height: 19px;
+  place-items: center;
+  margin-left: 6px;
+  border-radius: 999px;
+  padding: 0 5px;
+  color: var(--paper);
+  background: var(--warning);
+  font-family: "Azeret Mono", monospace;
+  font-size: 0.66rem;
 }
 
 h1,
@@ -340,6 +356,11 @@ main {
 .notice-warning {
   border-color: var(--warning);
   background: var(--warning-soft);
+}
+
+.notice-success {
+  border-color: var(--success);
+  background: var(--success-soft);
 }
 
 .confirmation-copy {
@@ -709,6 +730,218 @@ main {
   margin-top: 24px;
 }
 
+.transaction-filters {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  align-items: end;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 16px;
+  background: var(--surface);
+}
+
+.filter-field {
+  display: grid;
+  grid-column: span 2;
+  gap: 6px;
+  min-width: 0;
+}
+
+.filter-field > span,
+.check-field span {
+  font-size: 0.76rem;
+  font-weight: 500;
+}
+
+.filter-field input,
+.filter-field select,
+.filter-field textarea {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 8px 10px;
+  color: var(--ink);
+  background: var(--paper);
+}
+
+.filter-field textarea {
+  min-height: 82px;
+  resize: vertical;
+}
+
+.search-filter {
+  grid-column: span 4;
+}
+
+.reset-filters {
+  grid-column: span 2;
+}
+
+.primary-button,
+.secondary-button {
+  min-height: 42px;
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.primary-button {
+  border: 1px solid var(--current);
+  color: var(--paper);
+  background: var(--current);
+}
+
+.secondary-button {
+  border: 1px solid var(--border);
+  color: var(--ink);
+  background: var(--paper);
+}
+
+.primary-button:disabled,
+.secondary-button:disabled {
+  border-color: var(--border);
+  color: var(--muted);
+  background: var(--surface);
+  cursor: not-allowed;
+}
+
+.result-note {
+  margin: -12px 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.maintenance-list {
+  border-top: 1px solid var(--border);
+}
+
+.maintenance-row {
+  border-bottom: 1px solid var(--border);
+}
+
+.maintenance-row.editing {
+  border-left: 3px solid var(--current);
+  background: rgba(220, 232, 231, 0.34);
+}
+
+.transaction-summary {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.5fr) minmax(180px, 1fr) auto auto minmax(142px, auto) 44px;
+  align-items: center;
+  gap: 14px;
+  min-height: 82px;
+  padding: 12px 4px 12px 12px;
+}
+
+.transaction-category {
+  display: grid;
+  min-width: 0;
+}
+
+.transaction-category > span {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.transaction-category strong {
+  overflow: hidden;
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.transaction-category small {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.74rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.review-tag {
+  border-left: 2px solid var(--warning);
+  padding: 4px 7px;
+  color: var(--warning);
+  font-size: 0.7rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.more-actions {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--ink);
+  background: transparent;
+  letter-spacing: 2px;
+  cursor: pointer;
+}
+
+.more-actions:hover,
+.more-actions[aria-expanded="true"] {
+  border-color: var(--current);
+  color: var(--current);
+  background: var(--current-soft);
+}
+
+.decision-editor {
+  border-top: 1px solid var(--border);
+  padding: 16px 16px 18px;
+}
+
+.editor-fields {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto auto minmax(260px, 1.5fr);
+  align-items: end;
+  gap: 16px;
+}
+
+.note-field {
+  grid-column: auto;
+}
+
+.check-field {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 8px 10px;
+  background: var(--paper);
+  cursor: pointer;
+}
+
+.check-field input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--current);
+}
+
+.editor-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.editor-note {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  text-align: right;
+}
+
 footer {
   align-items: center;
   border-top: 1px solid var(--border);
@@ -735,12 +968,20 @@ footer img {
   }
 
   .site-header {
+    display: grid;
     gap: 12px;
   }
 
+  .site-header nav {
+    display: grid;
+    width: 100%;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
   .site-header nav button {
-    padding: 8px;
-    font-size: 0.9rem;
+    min-width: 0;
+    padding: 7px 3px;
+    font-size: 0.78rem;
   }
 
   .overview-heading {
@@ -788,6 +1029,60 @@ footer img {
     grid-template-columns: 1fr auto;
     gap: 10px 12px;
     padding: 16px 4px;
+  }
+
+  .transaction-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .filter-field,
+  .search-filter,
+  .reset-filters {
+    grid-column: span 1;
+  }
+
+  .search-filter,
+  .reset-filters {
+    grid-column: 1 / -1;
+  }
+
+  .transaction-summary {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px 12px;
+    padding: 16px 4px 16px 12px;
+  }
+
+  .transaction-summary .transaction-description,
+  .transaction-summary .transaction-category {
+    grid-column: 1 / -1;
+  }
+
+  .transaction-summary .treatment,
+  .transaction-summary .review-tag {
+    justify-self: start;
+  }
+
+  .transaction-summary .transaction-amount {
+    grid-column: 1;
+    justify-items: start;
+  }
+
+  .transaction-summary .more-actions {
+    grid-column: 2;
+    grid-row: 4;
+  }
+
+  .editor-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .editor-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .editor-note {
+    text-align: left;
   }
 
   .transaction-description {

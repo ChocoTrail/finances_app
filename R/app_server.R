@@ -5,6 +5,8 @@ create_finance_app_server <- function(
 
   function(input, output, session) {
     connection <- connection_factory()
+    transaction_revision <- shiny::reactiveVal(0L)
+    transaction_save_result <- shiny::reactiveVal(list(status = "idle"))
     session$onSessionEnded(function() {
       disconnect_finance_database(connection)
     })
@@ -36,12 +38,61 @@ create_finance_app_server <- function(
     })
 
     output$overview_screen <- shinyreact::reactive_output({
+      transaction_revision()
       build_overview_screen_contract(
         connection = connection,
         selected_month = input$overview_month,
         selected_category = input$overview_category
       )
     })
+
+    output$transaction_screen <- shinyreact::reactive_output({
+      transaction_revision()
+      build_transaction_screen_contract(
+        connection = connection,
+        filters = input$transaction_filters
+      )
+    })
+
+    output$transaction_save_result <- shinyreact::reactive_output({
+      transaction_save_result()
+    })
+
+    shiny::observeEvent(
+      input$transaction_save_request,
+      {
+        request <- input$transaction_save_request
+        request_id <- if (
+          is.list(request) && "request_id" %in% names(request)
+        ) {
+          as.character(request$request_id)
+        } else {
+          NULL
+        }
+
+        result <- tryCatch(
+          {
+            saved <- save_transaction_decision(connection, request)
+
+            if (saved$status == "saved") {
+              transaction_revision(transaction_revision() + 1L)
+            }
+
+            saved
+          },
+          error = function(error) {
+            list(
+              status = "error",
+              request_id = request_id,
+              message = conditionMessage(error)
+            )
+          }
+        )
+
+        transaction_save_result(result)
+      },
+      ignoreInit = TRUE
+    )
 
     output$import_preview <- shinyreact::reactive_output({
       upload <- input$account_file

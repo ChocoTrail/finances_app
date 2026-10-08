@@ -12,6 +12,19 @@
 - The filtered list distinguishes spending, refunds, and category offsets.
 - The screen contract is purpose-built and does not expose database tables directly.
 
+## Transaction maintenance
+
+- Transactions can be filtered by date range, account, category, merchant rule, budget treatment, review state, and text search.
+- The pending-review queue includes only transactions whose saved review state is pending.
+- Selecting a category from Overview opens Transactions with that month and category already applied.
+- Desktop uses compact rows; narrow screens use transaction cards without horizontal page scrolling.
+- A three-dot action expands a transaction-specific editor.
+- A saved edit can change category, reimbursable status, excluded status, and note.
+- Saving confirms the transaction, records a transaction override, and writes one audit row atomically.
+- A failed edit changes neither the saved decision nor its audit history.
+- Repeating the same save request is idempotent.
+- Merchant-default creation and management remain deferred to configuration work.
+
 ## Upload prototype
 
 - The page identifies itself as a technical prototype for Family finances.

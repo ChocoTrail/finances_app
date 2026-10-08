@@ -31,6 +31,34 @@ test_that("server returns the selected Overview slice", {
   })
 })
 
+test_that("server saves and refreshes a pending transaction decision", {
+  server <- create_finance_app_server(transaction_maintenance_connection_factory)
+
+  shiny::testServer(server, {
+    session$setInputs(transaction_filters = list(
+      start_date = NULL,
+      end_date = NULL,
+      review_state = "pending"
+    ))
+    transaction <- output$transaction_screen$transactions[[1]]
+
+    expect_equal(output$transaction_screen$total_count, 1L)
+
+    session$setInputs(transaction_save_request = list(
+      request_id = "server-save-request",
+      transaction_id = transaction$transaction_id,
+      category_code = "food_living",
+      is_reimbursable = FALSE,
+      is_excluded = FALSE,
+      note = "Reviewed in server test"
+    ))
+
+    expect_equal(output$transaction_save_result$status, "saved")
+    expect_equal(output$transaction_screen$pending_review_count, 0L)
+    expect_equal(output$transaction_screen$total_count, 0L)
+  })
+})
+
 test_that("server previews an uploaded CSV without writing it", {
   file_path <- write_prototype_export(tibble::tibble(
     DATE = c("10/01/2026", "10/02/2026"),

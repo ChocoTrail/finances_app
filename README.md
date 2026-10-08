@@ -15,9 +15,10 @@ preview-first atomic import service is implemented for step 5. The Step 6
 ShinyReact prototype proves the supported file-upload path and a typed JSON
 exchange between the React client and R server. Step 7 adds the read-only
 Overview, month navigation, account freshness, category rollover cards, and a
-category-filtered transaction list. Transaction maintenance, configuration,
-and deployment described in [`docs/application-design.md`](docs/application-design.md)
-remain to be built.
+category-filtered transaction list. Step 8 adds transaction search and filters,
+the pending-review queue, responsive transaction cards, and audited one-off
+decision edits. Configuration and deployment described in
+[`docs/application-design.md`](docs/application-design.md) remain to be built.
 
 ## Current workflow
 
@@ -148,8 +149,20 @@ labeled explicitly as well as styled with the designated error color.
 
 The update context reports the latest successful coverage date for checking
 and both credit cards. Selecting a category opens a read-only transaction list
-already filtered to that category and month. Search, general filters, and
-transaction actions are intentionally reserved for implementation step 8.
+already filtered to that category and month.
+
+## Transaction maintenance
+
+Transactions supports date range, account, category, merchant-default, budget-
+treatment, review-state, and description-search filters. Review shows all
+saved decisions still marked pending, independent of the current month.
+
+The three-dot action expands a transaction-specific editor for category,
+reimbursable status, budget exclusion, and an optional note. Each save confirms
+the decision and writes its before-and-after state to the audit log in the same
+database transaction. Repeated save requests are idempotent, and failures roll
+back the complete edit. Merchant-default management remains reserved for step
+9 rather than being mixed into one-off transaction correction.
 
 Private transaction overrides belong in `data/private/`. Files in that
 directory are ignored by Git and will eventually be replaced by durable MotherDuck table(s).

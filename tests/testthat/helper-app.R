@@ -7,6 +7,7 @@ source(file.path(project_root, "R", "database_queries.R"))
 source(file.path(project_root, "R", "import_service.R"))
 source(file.path(project_root, "R", "prototype_contracts.R"))
 source(file.path(project_root, "R", "overview_service.R"))
+source(file.path(project_root, "R", "transaction_service.R"))
 source(file.path(project_root, "R", "app_server.R"))
 
 empty_prototype_seed <- function() {
@@ -80,6 +81,43 @@ overview_connection_factory <- function() {
   seed_initial_database(
     connection,
     overview_seed(),
+    initialized_at = as.POSIXct("2026-05-06 12:00:00", tz = "UTC")
+  )
+  connection
+}
+
+transaction_maintenance_seed <- function() {
+  dplyr::bind_rows(
+    overview_seed(),
+    tibble::tibble(
+      account = "checking",
+      source_file = "Checking.csv",
+      source_row_number = 2L,
+      date = as.Date("2026-05-05"),
+      description = "NEW MERCHANT",
+      amount = -42,
+      check_number = NA_character_,
+      duplicate_sequence = 1L,
+      transaction_type = "expense",
+      budget_category = "Personal & discretionary",
+      category_source = "default",
+      category_rule = "default_discretionary",
+      is_reimbursable = FALSE,
+      override_note = NA_character_,
+      budget_amount = 42
+    )
+  )
+}
+
+transaction_maintenance_connection_factory <- function() {
+  connection <- connect_finance_database(":memory:")
+  apply_database_migrations(
+    connection,
+    file.path(project_root, "migrations")
+  )
+  seed_initial_database(
+    connection,
+    transaction_maintenance_seed(),
     initialized_at = as.POSIXct("2026-05-06 12:00:00", tz = "UTC")
   )
   connection

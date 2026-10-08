@@ -1,5 +1,14 @@
 import type { ChangeEvent } from "react";
 
+import TransactionsView, {
+  filtersForMonth,
+  reviewQueueFilters,
+  type TransactionFilters,
+  type TransactionSaveRequest,
+  type TransactionSaveResult,
+  type TransactionScreen,
+} from "@/TransactionsView";
+
 const {
   React,
   ShinyOutput,
@@ -12,7 +21,7 @@ const {
 } = window.shinyreact;
 
 type Account = "checking" | "credit_card_jacob" | "credit_card_kendra";
-type View = "overview" | "transactions" | "import";
+type View = "overview" | "transactions" | "review" | "import";
 
 type CategoryCard = {
   category_code: string;
@@ -31,18 +40,6 @@ type AccountFreshness = {
   last_updated: string | null;
 };
 
-type OverviewTransaction = {
-  transaction_id: string;
-  account: Account;
-  account_label: string;
-  date: string;
-  description: string;
-  amount: number;
-  budget_treatment: string;
-  category: string;
-  budget_effect: number;
-};
-
 type OverviewScreen = {
   status: "ready";
   selected_month: string;
@@ -53,9 +50,6 @@ type OverviewScreen = {
   next_month: string | null;
   categories: CategoryCard[];
   accounts: AccountFreshness[];
-  selected_category: { category_code: string; name: string } | null;
-  transaction_count: number;
-  transactions: OverviewTransaction[];
 };
 
 type ImportProblem = {
@@ -98,12 +92,6 @@ const currency = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
   maximumFractionDigits: 0,
-});
-
-const exactCurrency = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-  minimumFractionDigits: 2,
 });
 
 const dateFormatter = new Intl.DateTimeFormat("en-US", {
@@ -279,66 +267,6 @@ function OverviewView({ overview, onMonthChange, onSelectCategory }: {
   );
 }
 
-function treatmentLabel(treatment: string) {
-  if (treatment === "refund") return "Refund";
-  if (treatment === "category_offset") return "Category offset";
-  if (treatment === "expense") return "Spending";
-  return "No budget effect";
-}
-
-function TransactionsView({ overview, onBack }: {
-  overview: OverviewScreen;
-  onBack: () => void;
-}) {
-  const category = overview.selected_category;
-
-  return (
-    <main>
-      <button className="back-link" onClick={onBack} type="button">
-        <span aria-hidden="true">←</span> Back to Overview
-      </button>
-      <section className="transactions-heading" aria-labelledby="transactions-title">
-        <div>
-          <p className="eyebrow">Transactions · {overview.month_label}</p>
-          <h1 id="transactions-title">{category?.name ?? "Category transactions"}</h1>
-          <p className="lede">A read-only view of the transactions behind this category.</p>
-        </div>
-        <span className="count-label">
-          {overview.transaction_count} {overview.transaction_count === 1 ? "transaction" : "transactions"}
-        </span>
-      </section>
-
-      {overview.transactions.length === 0 ? (
-        <div className="empty-state transaction-empty">
-          <p className="empty-title">No transactions in this month</p>
-          <p>The allocation still participates in rollover.</p>
-        </div>
-      ) : (
-        <div className="transaction-list" role="list">
-          {overview.transactions.map((transaction) => {
-            const isCredit = transaction.budget_effect < 0;
-            return (
-              <article className="transaction-row" key={transaction.transaction_id} role="listitem">
-                <div className="transaction-description">
-                  <strong>{transaction.description}</strong>
-                  <span>{formatDate(transaction.date)} · {transaction.account_label}</span>
-                </div>
-                <span className={`treatment treatment-${transaction.budget_treatment}`}>
-                  {treatmentLabel(transaction.budget_treatment)}
-                </span>
-                <div className={isCredit ? "transaction-amount credit" : "transaction-amount"}>
-                  <strong>{exactCurrency.format(transaction.budget_effect)}</strong>
-                  <span>{isCredit ? "reduces spending" : "budget effect"}</span>
-                </div>
-              </article>
-            );
-          })}
-        </div>
-      )}
-    </main>
-  );
-}
-
 function PreviewPanel({ preview }: { preview: ImportPreview | null | undefined }) {
   const status = useShinyOutputStatus("import_preview");
   const error = useShinyOutputError("import_preview");
@@ -482,18 +410,43 @@ export default function App() {
   const busy = useShinyBusy();
   const [view, setView] = React.useState<View>("overview");
   const [, setMonth] = useShinyInput("overview_month", localCurrentMonth(), { debounceMs: 0 });
-  const [selectedCategory, setSelectedCategory] = useShinyInput<string | null>(
+  const [, setSelectedCategory] = useShinyInput<string | null>(
     "overview_category",
     null,
     { debounceMs: 0 },
+  );
+  const initialTransactionFilters = filtersForMonth(localCurrentMonth());
+  const [transactionFilters, setTransactionFilters] = React.useState<TransactionFilters>(
+    initialTransactionFilters,
+  );
+  const [, setTransactionFilterInput] = useShinyInput<TransactionFilters>(
+    "transaction_filters",
+    initialTransactionFilters,
+    { debounceMs: 180 },
+  );
+  const [, setTransactionSaveRequest] = useShinyInput<TransactionSaveRequest | null>(
+    "transaction_save_request",
+    null,
+    { priority: "event" },
   );
   const [account, setAccount] = useShinyInput<Account>("account_slot", "checking", { debounceMs: 0 });
   const [message, setMessage] = useShinyInput("prototype_message", "Hello from React", { debounceMs: 0 });
   const overview = useShinyOutputValue<OverviewScreen | null>("overview_screen", null);
   const overviewError = useShinyOutputError("overview_screen");
   const overviewStatus = useShinyOutputStatus("overview_screen");
+  const transactionScreen = useShinyOutputValue<TransactionScreen | null>("transaction_screen", null);
+  const transactionError = useShinyOutputError("transaction_screen");
+  const transactionStatus = useShinyOutputStatus("transaction_screen");
+  const transactionSaveResult = useShinyOutputValue<TransactionSaveResult | null>(
+    "transaction_save_result",
+    null,
+  );
   const preview = useShinyOutputValue<ImportPreview | null>("import_preview", null);
   const echo = useShinyOutputValue<EchoResponse | null>("prototype_echo", null);
+
+  React.useEffect(() => {
+    setTransactionFilterInput(transactionFilters);
+  }, [transactionFilters]);
 
   if (!initialized) return null;
 
@@ -505,7 +458,29 @@ export default function App() {
 
   const openCategory = (categoryCode: string) => {
     setSelectedCategory(categoryCode);
+    setTransactionFilters({
+      ...filtersForMonth(overview?.selected_month ?? localCurrentMonth()),
+      category: categoryCode,
+    });
     setView("transactions");
+  };
+
+  const openTransactionHistory = () => {
+    setTransactionFilters(filtersForMonth(overview?.selected_month ?? localCurrentMonth()));
+    setView("transactions");
+  };
+
+  const openReviewQueue = () => {
+    setTransactionFilters(reviewQueueFilters());
+    setView("review");
+  };
+
+  const resetTransactionFilters = () => {
+    setTransactionFilters(
+      view === "review"
+        ? reviewQueueFilters()
+        : filtersForMonth(overview?.selected_month ?? localCurrentMonth()),
+    );
   };
 
   return (
@@ -520,11 +495,28 @@ export default function App() {
         </a>
         <nav aria-label="Primary navigation">
           <button
-            aria-current={view === "overview" || view === "transactions" ? "page" : undefined}
+            aria-current={view === "overview" ? "page" : undefined}
             onClick={() => setView("overview")}
             type="button"
           >
             Overview
+          </button>
+          <button
+            aria-current={view === "transactions" ? "page" : undefined}
+            onClick={openTransactionHistory}
+            type="button"
+          >
+            Transactions
+          </button>
+          <button
+            aria-current={view === "review" ? "page" : undefined}
+            onClick={openReviewQueue}
+            type="button"
+          >
+            Review
+            {transactionScreen && transactionScreen.pending_review_count > 0 && (
+              <span className="nav-count">{transactionScreen.pending_review_count}</span>
+            )}
           </button>
           <button
             aria-current={view === "import" ? "page" : undefined}
@@ -545,14 +537,29 @@ export default function App() {
           setAccount={setAccount}
           setMessage={setMessage}
         />
+      ) : view === "transactions" || view === "review" ? (
+        transactionError ? (
+          <main><OutputError message={transactionError.message} /></main>
+        ) : !transactionScreen ? (
+          <main><LoadingPanel label="Loading transactions…" /></main>
+        ) : (
+          <div className={transactionStatus === "recalculating" ? "recalculating" : ""}>
+            <TransactionsView
+              filters={transactionFilters}
+              isReviewQueue={view === "review"}
+              onBack={() => setView("overview")}
+              onFiltersChange={setTransactionFilters}
+              onReset={resetTransactionFilters}
+              onSave={setTransactionSaveRequest}
+              saveResult={transactionSaveResult}
+              screen={transactionScreen}
+            />
+          </div>
+        )
       ) : overviewError ? (
         <main><OutputError message={overviewError.message} /></main>
       ) : !overview ? (
         <main><LoadingPanel label="Loading your budget…" /></main>
-      ) : view === "transactions" && selectedCategory ? (
-        <div className={overviewStatus === "recalculating" ? "recalculating" : ""}>
-          <TransactionsView overview={overview} onBack={() => setView("overview")} />
-        </div>
       ) : (
         <div className={overviewStatus === "recalculating" ? "recalculating" : ""}>
           <OverviewView
