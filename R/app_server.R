@@ -35,6 +35,14 @@ create_finance_app_server <- function(
       format_prototype_echo(message)
     })
 
+    output$overview_screen <- shinyreact::reactive_output({
+      build_overview_screen_contract(
+        connection = connection,
+        selected_month = input$overview_month,
+        selected_category = input$overview_category
+      )
+    })
+
     output$import_preview <- shinyreact::reactive_output({
       upload <- input$account_file
       account <- input$account_slot

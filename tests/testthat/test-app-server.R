@@ -9,6 +9,28 @@ test_that("server returns acknowledged JSON", {
   })
 })
 
+test_that("server returns the selected Overview slice", {
+  server <- create_finance_app_server(overview_connection_factory)
+
+  shiny::testServer(server, {
+    session$setInputs(
+      overview_month = "2026-04-01",
+      overview_category = "personal_discretionary"
+    )
+
+    expect_equal(output$overview_screen$selected_month, "2026-04-01")
+    expect_equal(
+      output$overview_screen$selected_category$category_code,
+      "personal_discretionary"
+    )
+    expect_equal(output$overview_screen$transaction_count, 1L)
+    expect_equal(
+      output$overview_screen$transactions[[1]]$description,
+      "TARGET STORE"
+    )
+  })
+})
+
 test_that("server previews an uploaded CSV without writing it", {
   file_path <- write_prototype_export(tibble::tibble(
     DATE = c("10/01/2026", "10/02/2026"),

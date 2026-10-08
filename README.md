@@ -13,9 +13,11 @@ steps 1 through 3. The `choco_trail.finances_app` MotherDuck schema is
 initialized with the same validated history, completing step 4. The
 preview-first atomic import service is implemented for step 5. The Step 6
 ShinyReact prototype proves the supported file-upload path and a typed JSON
-exchange between the React client and R server. The read-only application
-screens and deployment configuration described in
-[`docs/application-design.md`](docs/application-design.md) remain to be built.
+exchange between the React client and R server. Step 7 adds the read-only
+Overview, month navigation, account freshness, category rollover cards, and a
+category-filtered transaction list. Transaction maintenance, configuration,
+and deployment described in [`docs/application-design.md`](docs/application-design.md)
+remain to be built.
 
 ## Current workflow
 
@@ -136,6 +138,18 @@ Start the app locally with:
 ```sh
 Rscript -e 'shiny::runApp(".")'
 ```
+
+## Read-only Overview
+
+Overview defaults to the current month and reads its five category cards from
+the database-backed rollover ledger. Each card shows the independently carried
+available balance plus current-month net spending and allocation. Deficits are
+labeled explicitly as well as styled with the designated error color.
+
+The update context reports the latest successful coverage date for checking
+and both credit cards. Selecting a category opens a read-only transaction list
+already filtered to that category and month. Search, general filters, and
+transaction actions are intentionally reserved for implementation step 8.
 
 Private transaction overrides belong in `data/private/`. Files in that
 directory are ignored by Git and will eventually be replaced by durable MotherDuck table(s).

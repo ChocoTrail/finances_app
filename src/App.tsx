@@ -12,6 +12,51 @@ const {
 } = window.shinyreact;
 
 type Account = "checking" | "credit_card_jacob" | "credit_card_kendra";
+type View = "overview" | "transactions" | "import";
+
+type CategoryCard = {
+  category_code: string;
+  name: string;
+  monthly_allocation: number;
+  net_spending: number;
+  opening_rollover: number;
+  available_balance: number;
+  balance_state: "available" | "deficit";
+};
+
+type AccountFreshness = {
+  account: Account;
+  label: string;
+  data_through: string | null;
+  last_updated: string | null;
+};
+
+type OverviewTransaction = {
+  transaction_id: string;
+  account: Account;
+  account_label: string;
+  date: string;
+  description: string;
+  amount: number;
+  budget_treatment: string;
+  category: string;
+  budget_effect: number;
+};
+
+type OverviewScreen = {
+  status: "ready";
+  selected_month: string;
+  month_label: string;
+  current_month: string;
+  budget_start_month: string;
+  previous_month: string | null;
+  next_month: string | null;
+  categories: CategoryCard[];
+  accounts: AccountFreshness[];
+  selected_category: { category_code: string; name: string } | null;
+  transaction_count: number;
+  transactions: OverviewTransaction[];
+};
 
 type ImportProblem = {
   code: string;
@@ -49,6 +94,36 @@ const accounts: Array<{ value: Account; label: string }> = [
   { value: "credit_card_kendra", label: "Kendra’s credit card" },
 ];
 
+const currency = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  maximumFractionDigits: 0,
+});
+
+const exactCurrency = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  minimumFractionDigits: 2,
+});
+
+const dateFormatter = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+  timeZone: "UTC",
+});
+
+function localCurrentMonth() {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  return `${year}-${month}-01`;
+}
+
+function formatDate(value: string) {
+  return dateFormatter.format(new Date(`${value}T00:00:00Z`));
+}
+
 function Metric({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="metric">
@@ -58,17 +133,217 @@ function Metric({ label, value }: { label: string; value: string | number }) {
   );
 }
 
+function LoadingPanel({ label }: { label: string }) {
+  return (
+    <div className="screen-state" role="status">
+      <span className="loading-mark" aria-hidden="true" />
+      <p>{label}</p>
+    </div>
+  );
+}
+
+function OutputError({ message }: { message: string }) {
+  return (
+    <div className="notice notice-error screen-error" role="alert">
+      <strong>Couldn’t load this view.</strong> {message}
+    </div>
+  );
+}
+
+function MonthNavigation({ overview, onChange }: {
+  overview: OverviewScreen;
+  onChange: (month: string) => void;
+}) {
+  return (
+    <div className="month-navigation" aria-label="Budget month">
+      <button
+        aria-label="Previous month"
+        disabled={!overview.previous_month}
+        onClick={() => overview.previous_month && onChange(overview.previous_month)}
+        type="button"
+      >
+        <span aria-hidden="true">←</span>
+      </button>
+      <div>
+        <span>Budget month</span>
+        <strong>{overview.month_label}</strong>
+      </div>
+      <button
+        aria-label="Next month"
+        disabled={!overview.next_month}
+        onClick={() => overview.next_month && onChange(overview.next_month)}
+        type="button"
+      >
+        <span aria-hidden="true">→</span>
+      </button>
+    </div>
+  );
+}
+
+function AccountFreshnessList({ accounts: freshness }: { accounts: AccountFreshness[] }) {
+  return (
+    <section className="freshness" aria-labelledby="freshness-title">
+      <div>
+        <p className="eyebrow">Update context</p>
+        <h2 id="freshness-title">Account data</h2>
+      </div>
+      <ul>
+        {freshness.map((account) => (
+          <li key={account.account}>
+            <span>{account.label}</span>
+            <strong>
+              {account.data_through ? `Through ${formatDate(account.data_through)}` : "No imports yet"}
+            </strong>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function CategoryCardView({ category, monthLabel, onSelect }: {
+  category: CategoryCard;
+  monthLabel: string;
+  onSelect: (categoryCode: string) => void;
+}) {
+  const progress = Math.max(
+    0,
+    Math.min(100, (category.net_spending / category.monthly_allocation) * 100),
+  );
+  const spendingText = category.net_spending < 0
+    ? `${currency.format(Math.abs(category.net_spending))} net credit`
+    : `${currency.format(category.net_spending)} spent`;
+
+  return (
+    <button
+      aria-label={`View ${category.name} transactions for ${monthLabel}`}
+      className={category.balance_state === "deficit" ? "category-card deficit" : "category-card"}
+      onClick={() => onSelect(category.category_code)}
+      type="button"
+    >
+      <span className="card-title">{category.name}</span>
+      <span className="balance-label">
+        {category.balance_state === "deficit" ? "Deficit" : "Available"}
+      </span>
+      <strong className="category-balance">{currency.format(category.available_balance)}</strong>
+      <span className="spending-line">
+        <span>{spendingText}</span>
+        <span>{currency.format(category.monthly_allocation)} allocated</span>
+      </span>
+      <span className="progress-track" aria-hidden="true">
+        <span style={{ width: `${progress}%` }} />
+      </span>
+      <span className="card-link">View transactions <span aria-hidden="true">→</span></span>
+    </button>
+  );
+}
+
+function OverviewView({ overview, onMonthChange, onSelectCategory }: {
+  overview: OverviewScreen;
+  onMonthChange: (month: string) => void;
+  onSelectCategory: (categoryCode: string) => void;
+}) {
+  return (
+    <main>
+      <section className="overview-heading" aria-labelledby="overview-title">
+        <div>
+          <p className="eyebrow">Overview</p>
+          <h1 id="overview-title">Your rollover budget</h1>
+          <p className="lede">Each category carries its own balance forward month to month.</p>
+        </div>
+        <MonthNavigation overview={overview} onChange={onMonthChange} />
+      </section>
+
+      <AccountFreshnessList accounts={overview.accounts} />
+
+      <section aria-labelledby="categories-title">
+        <div className="section-heading compact-heading">
+          <div>
+            <p className="eyebrow">Available by category</p>
+            <h2 id="categories-title">{overview.month_label}</h2>
+          </div>
+          <p>Available includes this month’s allocation and all earlier rollover.</p>
+        </div>
+        <div className="category-grid">
+          {overview.categories.map((category) => (
+            <CategoryCardView
+              category={category}
+              key={category.category_code}
+              monthLabel={overview.month_label}
+              onSelect={onSelectCategory}
+            />
+          ))}
+        </div>
+      </section>
+    </main>
+  );
+}
+
+function treatmentLabel(treatment: string) {
+  if (treatment === "refund") return "Refund";
+  if (treatment === "category_offset") return "Category offset";
+  if (treatment === "expense") return "Spending";
+  return "No budget effect";
+}
+
+function TransactionsView({ overview, onBack }: {
+  overview: OverviewScreen;
+  onBack: () => void;
+}) {
+  const category = overview.selected_category;
+
+  return (
+    <main>
+      <button className="back-link" onClick={onBack} type="button">
+        <span aria-hidden="true">←</span> Back to Overview
+      </button>
+      <section className="transactions-heading" aria-labelledby="transactions-title">
+        <div>
+          <p className="eyebrow">Transactions · {overview.month_label}</p>
+          <h1 id="transactions-title">{category?.name ?? "Category transactions"}</h1>
+          <p className="lede">A read-only view of the transactions behind this category.</p>
+        </div>
+        <span className="count-label">
+          {overview.transaction_count} {overview.transaction_count === 1 ? "transaction" : "transactions"}
+        </span>
+      </section>
+
+      {overview.transactions.length === 0 ? (
+        <div className="empty-state transaction-empty">
+          <p className="empty-title">No transactions in this month</p>
+          <p>The allocation still participates in rollover.</p>
+        </div>
+      ) : (
+        <div className="transaction-list" role="list">
+          {overview.transactions.map((transaction) => {
+            const isCredit = transaction.budget_effect < 0;
+            return (
+              <article className="transaction-row" key={transaction.transaction_id} role="listitem">
+                <div className="transaction-description">
+                  <strong>{transaction.description}</strong>
+                  <span>{formatDate(transaction.date)} · {transaction.account_label}</span>
+                </div>
+                <span className={`treatment treatment-${transaction.budget_treatment}`}>
+                  {treatmentLabel(transaction.budget_treatment)}
+                </span>
+                <div className={isCredit ? "transaction-amount credit" : "transaction-amount"}>
+                  <strong>{exactCurrency.format(transaction.budget_effect)}</strong>
+                  <span>{isCredit ? "reduces spending" : "budget effect"}</span>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      )}
+    </main>
+  );
+}
+
 function PreviewPanel({ preview }: { preview: ImportPreview | null | undefined }) {
   const status = useShinyOutputStatus("import_preview");
   const error = useShinyOutputError("import_preview");
 
-  if (error) {
-    return (
-      <div className="notice notice-error" role="alert">
-        <strong>Preview failed.</strong> {error.message}
-      </div>
-    );
-  }
+  if (error) return <OutputError message={error.message} />;
 
   if (!preview || preview.status === "waiting") {
     return (
@@ -80,11 +355,7 @@ function PreviewPanel({ preview }: { preview: ImportPreview | null | undefined }
   }
 
   if (preview.status === "error") {
-    return (
-      <div className="notice notice-error" role="alert">
-        <strong>Preview failed.</strong> {preview.message}
-      </div>
-    );
+    return <OutputError message={preview.message ?? "The preview failed."} />;
   }
 
   return (
@@ -130,96 +401,171 @@ function PreviewPanel({ preview }: { preview: ImportPreview | null | undefined }
   );
 }
 
+function ImportPrototype({ account, echo, message, preview, setAccount, setMessage }: {
+  account: Account;
+  echo: EchoResponse | null | undefined;
+  message: string;
+  preview: ImportPreview | null | undefined;
+  setAccount: (account: Account) => void;
+  setMessage: (message: string) => void;
+}) {
+  return (
+    <main>
+      <section className="overview-heading" aria-labelledby="import-title">
+        <div>
+          <p className="eyebrow">Technical prototype</p>
+          <h1 id="import-title">Import bridge</h1>
+          <p className="lede">The proven upload path remains available while Admin is built later.</p>
+        </div>
+        <span className="prototype-tag">Upload + JSON bridge</span>
+      </section>
+
+      <section className="panel" aria-labelledby="upload-title">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">File transfer</p>
+            <h2 id="upload-title">Preview an account export</h2>
+          </div>
+          <p>Select the account slot before choosing its complete-day CSV export.</p>
+        </div>
+
+        <fieldset className="account-picker">
+          <legend>Account slot</legend>
+          <div className="account-options">
+            {accounts.map((option) => (
+              <label
+                className={account === option.value ? "account-option selected" : "account-option"}
+                key={option.value}
+              >
+                <input
+                  checked={account === option.value}
+                  name="account-slot"
+                  onChange={() => setAccount(option.value)}
+                  type="radio"
+                  value={option.value}
+                />
+                <span>{option.label}</span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+
+        <ShinyOutput id="upload_widget" className="shiny-html-output upload-holder" />
+        <PreviewPanel preview={preview} />
+      </section>
+
+      <section className="panel bridge-panel" aria-labelledby="bridge-title">
+        <div>
+          <p className="eyebrow">JSON exchange</p>
+          <h2 id="bridge-title">Client/server check</h2>
+          <p>This text crosses the ShinyReact bridge and returns as structured JSON.</p>
+        </div>
+        <label className="text-field">
+          <span>Message</span>
+          <input
+            onChange={(event: ChangeEvent<HTMLInputElement>) => setMessage(event.target.value)}
+            type="text"
+            value={message}
+          />
+        </label>
+        <div className="echo" aria-live="polite">
+          <span>R server</span>
+          <strong>{echo?.acknowledged ? echo.message : "Waiting for the server…"}</strong>
+        </div>
+      </section>
+    </main>
+  );
+}
+
 export default function App() {
   const initialized = useShinyInitialized();
   const busy = useShinyBusy();
-  const [account, setAccount] = useShinyInput<Account>("account_slot", "checking", {
-    debounceMs: 0,
-  });
-  const [message, setMessage] = useShinyInput("prototype_message", "Hello from React", {
-    debounceMs: 0,
-  });
+  const [view, setView] = React.useState<View>("overview");
+  const [, setMonth] = useShinyInput("overview_month", localCurrentMonth(), { debounceMs: 0 });
+  const [selectedCategory, setSelectedCategory] = useShinyInput<string | null>(
+    "overview_category",
+    null,
+    { debounceMs: 0 },
+  );
+  const [account, setAccount] = useShinyInput<Account>("account_slot", "checking", { debounceMs: 0 });
+  const [message, setMessage] = useShinyInput("prototype_message", "Hello from React", { debounceMs: 0 });
+  const overview = useShinyOutputValue<OverviewScreen | null>("overview_screen", null);
+  const overviewError = useShinyOutputError("overview_screen");
+  const overviewStatus = useShinyOutputStatus("overview_screen");
   const preview = useShinyOutputValue<ImportPreview | null>("import_preview", null);
   const echo = useShinyOutputValue<EchoResponse | null>("prototype_echo", null);
 
   if (!initialized) return null;
 
+  const changeMonth = (nextMonth: string) => {
+    setSelectedCategory(null);
+    setMonth(nextMonth);
+    setView("overview");
+  };
+
+  const openCategory = (categoryCode: string) => {
+    setSelectedCategory(categoryCode);
+    setView("transactions");
+  };
+
   return (
     <div className={busy ? "app-shell busy" : "app-shell"}>
       <div className="activity-line" aria-hidden="true" />
       <header className="site-header">
-        <div>
-          <p className="eyebrow">Technical prototype</p>
-          <h1>Family finances</h1>
-          <p className="lede">
-            A first connection between the React interface and the R financial rules.
-          </p>
-        </div>
-        <span className="prototype-tag">Upload + JSON bridge</span>
+        <a className="product-name" href="#" onClick={(event) => {
+          event.preventDefault();
+          setView("overview");
+        }}>
+          Family finances
+        </a>
+        <nav aria-label="Primary navigation">
+          <button
+            aria-current={view === "overview" || view === "transactions" ? "page" : undefined}
+            onClick={() => setView("overview")}
+            type="button"
+          >
+            Overview
+          </button>
+          <button
+            aria-current={view === "import" ? "page" : undefined}
+            onClick={() => setView("import")}
+            type="button"
+          >
+            Import prototype
+          </button>
+        </nav>
       </header>
 
-      <main>
-        <section className="panel" aria-labelledby="upload-title">
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow">File transfer</p>
-              <h2 id="upload-title">Preview an account export</h2>
-            </div>
-            <p>Select the account slot before choosing its complete-day CSV export.</p>
-          </div>
-
-          <fieldset className="account-picker">
-            <legend>Account slot</legend>
-            <div className="account-options">
-              {accounts.map((option) => (
-                <label
-                  className={account === option.value ? "account-option selected" : "account-option"}
-                  key={option.value}
-                >
-                  <input
-                    checked={account === option.value}
-                    name="account-slot"
-                    onChange={() => setAccount(option.value)}
-                    type="radio"
-                    value={option.value}
-                  />
-                  <span>{option.label}</span>
-                </label>
-              ))}
-            </div>
-          </fieldset>
-
-          <ShinyOutput id="upload_widget" className="shiny-html-output upload-holder" />
-          <PreviewPanel preview={preview} />
-        </section>
-
-        <section className="panel bridge-panel" aria-labelledby="bridge-title">
-          <div>
-            <p className="eyebrow">JSON exchange</p>
-            <h2 id="bridge-title">Client/server check</h2>
-            <p>This text crosses the ShinyReact bridge and returns as structured JSON.</p>
-          </div>
-          <label className="text-field">
-            <span>Message</span>
-            <input
-              onChange={(event: ChangeEvent<HTMLInputElement>) => setMessage(event.target.value)}
-              type="text"
-              value={message}
-            />
-          </label>
-          <div className="echo" aria-live="polite">
-            <span>R server</span>
-            <strong>{echo?.acknowledged ? echo.message : "Waiting for the server…"}</strong>
-          </div>
-        </section>
-      </main>
+      {view === "import" ? (
+        <ImportPrototype
+          account={account}
+          echo={echo}
+          message={message}
+          preview={preview}
+          setAccount={setAccount}
+          setMessage={setMessage}
+        />
+      ) : overviewError ? (
+        <main><OutputError message={overviewError.message} /></main>
+      ) : !overview ? (
+        <main><LoadingPanel label="Loading your budget…" /></main>
+      ) : view === "transactions" && selectedCategory ? (
+        <div className={overviewStatus === "recalculating" ? "recalculating" : ""}>
+          <TransactionsView overview={overview} onBack={() => setView("overview")} />
+        </div>
+      ) : (
+        <div className={overviewStatus === "recalculating" ? "recalculating" : ""}>
+          <OverviewView
+            overview={overview}
+            onMonthChange={changeMonth}
+            onSelectCategory={openCategory}
+          />
+        </div>
+      )}
 
       <footer>
         <span>A Choco Trail project</span>
-        <img
-          alt="Choco Trail"
-          src="brand/logo/svg/choco-trail-lockup-horizontal-ink-outlined.svg"
-        />
+        <img alt="Choco Trail" src="brand/logo/svg/choco-trail-lockup-horizontal-ink-outlined.svg" />
       </footer>
     </div>
   );
