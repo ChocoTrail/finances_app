@@ -3,3 +3,5 @@ data/raw/*.csv
 data/raw/*.CSV
 data/private/*.csv
 data/private/*.CSV
+data/local/*.duckdb
+data/local/*.duckdb.wal

@@ -6,11 +6,12 @@ Real account exports belong in `data/raw/`. CSV files in that directory are igno
 
 ## Current status
 
-The repository currently contains the validated local transaction pipeline and
-its protected April through September 2026 baseline. The database, import
-service, ShinyReact interface, and deployment configuration described in
-[`docs/application-design.md`](docs/application-design.md) have not yet been
-implemented.
+The repository contains the validated local transaction pipeline, its
+protected April through September 2026 baseline, and the versioned local
+DuckDB schema and initial seed from implementation steps 1 and 2. MotherDuck,
+the import service, ShinyReact interface, and deployment configuration
+described in [`docs/application-design.md`](docs/application-design.md) have
+not yet been implemented.
 
 ## Current workflow
 
@@ -27,6 +28,26 @@ Rscript tests/test-baseline.R
 The synthetic checks always run. The private baseline comparison runs only
 when all three ignored account exports and the ignored transaction override
 file are available locally.
+
+## Local database
+
+Run the database checks from the project root with:
+
+```sh
+Rscript tests/test-database.R
+```
+
+Create the initial local database with:
+
+```sh
+Rscript scripts/04_initialize_database.R
+```
+
+The initializer applies pending files from `migrations/`, then seeds the fixed
+categories, current transactions and decisions, merchant rules, April 2026
+budget version, and zero opening balances. It refuses to overwrite a database
+that already contains seed data. Local `.duckdb` files under `data/local/` are
+ignored by Git.
 
 Private transaction overrides belong in `data/private/`. Files in that
 directory are ignored by Git and will eventually be replaced by durable MotherDuck table(s).
