@@ -72,6 +72,7 @@ run_test("migrations create the complete schema and are idempotent", {
   with_test_database({
     first_run <- apply_database_migrations(connection)
     second_run <- apply_database_migrations(connection)
+    migration_status <- database_migration_status(connection)
     expected_tables <- sort(c(
       "budget_allocations",
       "budget_opening_balances",
@@ -82,11 +83,17 @@ run_test("migrations create the complete schema and are idempotent", {
       "merchant_rules",
       "schema_migrations",
       "transaction_decisions",
+      "transaction_sightings",
       "transactions"
     ))
 
-    expect_equal(nrow(first_run), 1L, "Expected one applied migration.")
+    expect_equal(nrow(first_run), 2L, "Expected two applied migrations.")
     expect_equal(second_run, first_run, "Expected migration reruns to be safe.")
+    expect_equal(
+      migration_status$status,
+      c("applied", "applied"),
+      "Expected every available migration to be applied."
+    )
     expect_equal(
       sort(DBI::dbListTables(connection)),
       expected_tables,
@@ -126,6 +133,7 @@ run_test("the initial seed writes durable identities and configuration", {
         "category_count",
         "import_count",
         "transaction_count",
+        "sighting_count",
         "decision_count",
         "merchant_rule_count",
         "budget_version_count",
@@ -133,7 +141,7 @@ run_test("the initial seed writes durable identities and configuration", {
         "opening_balance_count",
         "audit_count"
       )])),
-      c(5L, 1L, 2L, 2L, 21L, 1L, 5L, 5L, 29L),
+      c(5L, 1L, 2L, 2L, 2L, 21L, 1L, 5L, 5L, 29L),
       "The initial seed row counts changed."
     )
 

@@ -10,8 +10,9 @@ The repository contains the validated local transaction pipeline, its
 protected April through September 2026 baseline, and the versioned local
 DuckDB schema, initial seed, and database-equivalence checks from implementation
 steps 1 through 3. The `choco_trail.finances_app` MotherDuck schema is
-initialized with the same validated history, completing step 4. The import
-service, ShinyReact interface, and deployment configuration described in
+initialized with the same validated history, completing step 4. The
+preview-first atomic import service is implemented for step 5. The ShinyReact
+interface and deployment configuration described in
 [`docs/application-design.md`](docs/application-design.md) have not yet been
 implemented.
 
@@ -86,6 +87,27 @@ reviewed. The complete initialization, validation, and recovery procedure is in
 The production schema has been initialized and independently validated against
 the protected local pipeline. Re-running the preview is safe and reports the
 persisted table counts without changing data.
+
+## Import service
+
+[`R/import_service.R`](R/import_service.R) provides the server-side preview and
+confirmation workflow for checking, Jacob's credit card, and Kendra's credit
+card. Preview performs no writes. It validates every source row, filters to
+posted transactions, assigns durable duplicate identities, reports new and
+known rows, applies saved database merchant rules prospectively, and blocks the
+whole file when any row is malformed.
+
+Confirmation verifies the account slot and filename, then saves the import,
+new transactions, initial decisions, audit rows, and transaction sightings in
+one database transaction. Reimports preserve saved decisions and record another
+sighting without duplicating transactions. Partial-day exports remain
+unsupported and are called out in the confirmation contract.
+
+Run the import regression suite with:
+
+```sh
+Rscript tests/test-import-service.R
+```
 
 Private transaction overrides belong in `data/private/`. Files in that
 directory are ignored by Git and will eventually be replaced by durable MotherDuck table(s).

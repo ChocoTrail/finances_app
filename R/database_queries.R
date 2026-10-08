@@ -2,6 +2,16 @@ read_database_transactions <- function(connection) {
   DBI::dbGetQuery(
     connection,
     paste(
+      "WITH sighting_bounds AS (",
+      "SELECT",
+      "transaction_id,",
+      "arg_min(import_id, seen_at) AS first_seen_import_id,",
+      "arg_max(import_id, seen_at) AS last_seen_import_id,",
+      "min(seen_at) AS first_seen_at,",
+      "max(seen_at) AS last_seen_at",
+      "FROM transaction_sightings",
+      "GROUP BY transaction_id",
+      ")",
       "SELECT",
       "t.transaction_id,",
       "t.account,",
@@ -18,9 +28,14 @@ read_database_transactions <- function(connection) {
       "d.review_state,",
       "d.is_reimbursable,",
       "d.is_excluded,",
-      "d.note AS override_note",
+      "d.note AS override_note,",
+      "s.first_seen_import_id,",
+      "s.last_seen_import_id,",
+      "s.first_seen_at,",
+      "s.last_seen_at",
       "FROM transactions t",
       "JOIN transaction_decisions d USING (transaction_id)",
+      "JOIN sighting_bounds s USING (transaction_id)",
       "LEFT JOIN categories c USING (category_code)",
       "ORDER BY t.account, t.transaction_date, t.transaction_id"
     )

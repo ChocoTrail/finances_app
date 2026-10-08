@@ -118,11 +118,23 @@ connect_app_finance_database <- function(
 ) {
   target <- validate_finance_database_target(target, config)
 
-  switch(
+  connection <- switch(
     target,
     local = connect_local_finance_database(config, read_only),
     motherduck = connect_motherduck_finance_database(config)
   )
+
+  if (target == "motherduck") {
+    tryCatch(
+      select_finance_schema(connection, config),
+      error = function(error) {
+        disconnect_finance_database(connection)
+        stop(conditionMessage(error), call. = FALSE)
+      }
+    )
+  }
+
+  connection
 }
 
 disconnect_finance_database <- function(connection) {
@@ -217,6 +229,7 @@ finance_database_contract <- function(
     "merchant_rules",
     "schema_migrations",
     "transaction_decisions",
+    "transaction_sightings",
     "transactions"
   )
   present_tables <- objects$table_name
@@ -249,6 +262,40 @@ get_migration_files <- function(migrations_path = "migrations") {
   )
 
   sort(migration_files)
+}
+
+database_migration_status <- function(
+  connection,
+  migrations_path = "migrations"
+) {
+  migration_files <- get_migration_files(migrations_path)
+
+  if (length(migration_files) == 0) {
+    stop("No database migrations were found in: ", migrations_path)
+  }
+
+  available <- tibble::tibble(
+    version = as.integer(substr(basename(migration_files), 1, 3)),
+    migration_name = basename(migration_files)
+  )
+  applied_names <- if (DBI::dbExistsTable(connection, "schema_migrations")) {
+    DBI::dbGetQuery(
+      connection,
+      "SELECT migration_name FROM schema_migrations"
+    )$migration_name
+  } else {
+    character()
+  }
+
+  available |>
+    dplyr::mutate(
+      status = dplyr::if_else(
+        migration_name %in% applied_names,
+        "applied",
+        "pending"
+      )
+    ) |>
+    dplyr::arrange(version)
 }
 
 apply_database_migrations <- function(
@@ -400,6 +447,7 @@ database_has_seed_data <- function(connection) {
     "categories",
     "imports",
     "transactions",
+    "transaction_sightings",
     "transaction_decisions",
     "merchant_rules",
     "budget_versions",
@@ -421,6 +469,23 @@ database_has_seed_data <- function(connection) {
 }
 
 prepare_initial_imports <- function(transactions, initialized_at) {
+  if (nrow(transactions) == 0) {
+    return(tibble::tibble(
+      import_id = character(),
+      account = character(),
+      source_filename = character(),
+      imported_at = as.POSIXct(character()),
+      coverage_start = as.Date(character()),
+      coverage_end = as.Date(character()),
+      source_row_count = integer(),
+      posted_row_count = integer(),
+      new_transaction_count = integer(),
+      known_transaction_count = integer(),
+      outcome = character(),
+      error_message = character()
+    ))
+  }
+
   transactions |>
     dplyr::group_by(account, source_file) |>
     dplyr::summarize(
@@ -663,6 +728,12 @@ seed_initial_database <- function(
   category_rows <- get_category_seed()
   import_rows <- prepare_initial_imports(transactions, initialized_at)
   transaction_rows <- prepare_initial_transactions(transactions, initialized_at)
+  sighting_rows <- transaction_rows |>
+    dplyr::transmute(
+      transaction_id,
+      import_id = first_seen_import_id,
+      seen_at = created_at
+    )
   decision_rows <- prepare_initial_decisions(
     transactions,
     transaction_rows,
@@ -713,6 +784,7 @@ seed_initial_database <- function(
     DBI::dbAppendTable(connection, "categories", category_rows)
     DBI::dbAppendTable(connection, "imports", import_rows)
     DBI::dbAppendTable(connection, "transactions", transaction_rows)
+    DBI::dbAppendTable(connection, "transaction_sightings", sighting_rows)
     DBI::dbAppendTable(connection, "transaction_decisions", decision_rows)
     DBI::dbAppendTable(connection, "merchant_rules", merchant_rows)
     DBI::dbAppendTable(connection, "budget_versions", budget_version_rows)
@@ -725,6 +797,7 @@ seed_initial_database <- function(
     category_count = nrow(category_rows),
     import_count = nrow(import_rows),
     transaction_count = nrow(transaction_rows),
+    sighting_count = nrow(sighting_rows),
     decision_count = nrow(decision_rows),
     merchant_rule_count = nrow(merchant_rows),
     budget_version_count = nrow(budget_version_rows),

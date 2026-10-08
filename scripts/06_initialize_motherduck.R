@@ -89,7 +89,9 @@ message(
 if (!write_to_motherduck) {
   if (schema_exists) {
     select_finance_schema(connection)
+    migration_status <- database_migration_status(connection)
     contract <- finance_database_contract(connection)
+    print(migration_status)
     print(contract$objects, row.names = FALSE)
     print(data.frame(
       table_name = names(contract$row_counts),
@@ -104,6 +106,7 @@ if (!write_to_motherduck) {
 } else {
   create_and_select_finance_schema(connection)
   apply_database_migrations(connection)
+  print(database_migration_status(connection))
 
   if (database_has_seed_data(connection)) {
     message(

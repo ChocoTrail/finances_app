@@ -57,6 +57,11 @@ If the schema already contains data, the script does not seed it again. It
 validates the existing contents and fails if they differ from the protected
 baseline.
 
+Migration 002 adds the append-only `transaction_sightings` table. It records
+each import in which an exact transaction identity appears, allowing first- and
+last-seen imports to be derived without rewriting transactions or their saved
+decisions.
+
 ## Recovery
 
 - A connection failure does not change the local database. Confirm that the
