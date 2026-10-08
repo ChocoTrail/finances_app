@@ -730,7 +730,7 @@ main {
 }
 
 .month-navigation span,
-.budget-label,
+.progress-label,
 .count-label,
 .treatment,
 .transaction-amount span {
@@ -862,57 +862,73 @@ main {
   font-weight: 500;
 }
 
-.budget-label {
+.progress-label {
   margin-top: 12px;
   color: var(--muted);
 }
 
-.category-budget {
-  margin: 2px 0 20px;
+.progress-summary {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 2px;
+}
+
+.progress-summary strong {
   font-family: "Azeret Mono", monospace;
-  font-size: clamp(1.55rem, 3vw, 2.2rem);
+  font-size: clamp(1.8rem, 3.5vw, 2.6rem);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.04em;
 }
 
-.spending-line {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
+.progress-summary span {
   color: var(--muted);
   font-size: 0.78rem;
 }
 
 .progress-track {
   width: 100%;
-  height: 4px;
+  height: 12px;
+  overflow: hidden;
   margin: 8px 0 20px;
+  border-radius: 999px;
   background: var(--surface);
 }
 
 .progress-track > span {
   display: block;
   height: 100%;
+  border-radius: inherit;
   background: var(--current);
 }
 
+.budget-allocation,
 .rollover-balance {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 16px;
   color: var(--muted);
   font-size: 0.76rem;
 }
 
+.budget-allocation {
+  margin-bottom: 6px;
+}
+
+.budget-allocation strong,
 .rollover-balance strong {
   color: var(--ink);
   font-family: "Azeret Mono", monospace;
   font-size: 0.82rem;
   font-weight: 500;
   font-variant-numeric: tabular-nums;
+}
+
+.rollover-balance {
+  margin-bottom: 16px;
 }
 
 .deficit .rollover-balance strong {

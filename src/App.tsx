@@ -239,9 +239,11 @@ function CategoryCardView({ category, monthLabel, onSelect }: {
   monthLabel: string;
   onSelect: (categoryCode: string) => void;
 }) {
-  const progress = category.monthly_allocation > 0
-    ? Math.max(0, Math.min(100, (category.net_spending / category.monthly_allocation) * 100))
+  const rawProgress = category.monthly_allocation > 0
+    ? (category.net_spending / category.monthly_allocation) * 100
     : 0;
+  const progress = Math.max(0, Math.min(100, rawProgress));
+  const progressText = `${Math.max(0, rawProgress).toFixed(0)}%`;
   const spendingText = category.net_spending < 0
     ? `${currency.format(Math.abs(category.net_spending))} net credit`
     : `${currency.format(category.net_spending)} spent`;
@@ -254,14 +256,24 @@ function CategoryCardView({ category, monthLabel, onSelect }: {
       type="button"
     >
       <span className="card-title">{category.name}</span>
-      <span className="budget-label">Monthly budget</span>
-      <strong className="category-budget">{currency.format(category.monthly_allocation)}</strong>
-      <span className="spending-line">
+      <span className="progress-label">Monthly progress</span>
+      <span className="progress-summary">
+        <strong>{progressText}</strong>
         <span>{spendingText}</span>
-        <span>{progress.toFixed(0)}%</span>
       </span>
-      <span className="progress-track" aria-hidden="true">
+      <span
+        aria-label={`${spendingText} of ${currency.format(category.monthly_allocation)} monthly budget`}
+        aria-valuemax={100}
+        aria-valuemin={0}
+        aria-valuenow={Math.round(progress)}
+        className="progress-track"
+        role="progressbar"
+      >
         <span style={{ width: `${progress}%` }} />
+      </span>
+      <span className="budget-allocation">
+        <span>Monthly budget</span>
+        <strong>{currency.format(category.monthly_allocation)}</strong>
       </span>
       <span className="rollover-balance">
         <span>{category.balance_state === "deficit" ? "Balance with rollover" : "Available with rollover"}</span>
