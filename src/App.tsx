@@ -8,6 +8,11 @@ import TransactionsView, {
   type TransactionSaveResult,
   type TransactionScreen,
 } from "@/TransactionsView";
+import AdminView, {
+  type ConfigurationSaveRequest,
+  type ConfigurationSaveResult,
+  type ConfigurationScreen,
+} from "@/AdminView";
 
 const {
   React,
@@ -21,7 +26,7 @@ const {
 } = window.shinyreact;
 
 type Account = "checking" | "credit_card_jacob" | "credit_card_kendra";
-type View = "overview" | "transactions" | "review" | "import";
+type View = "overview" | "transactions" | "review" | "admin";
 
 type CategoryCard = {
   category_code: string;
@@ -338,16 +343,7 @@ function ImportPrototype({ account, echo, message, preview, setAccount, setMessa
   setMessage: (message: string) => void;
 }) {
   return (
-    <main>
-      <section className="overview-heading" aria-labelledby="import-title">
-        <div>
-          <p className="eyebrow">Technical prototype</p>
-          <h1 id="import-title">Import bridge</h1>
-          <p className="lede">The proven upload path remains available while Admin is built later.</p>
-        </div>
-        <span className="prototype-tag">Upload + JSON bridge</span>
-      </section>
-
+    <div className="admin-import">
       <section className="panel" aria-labelledby="upload-title">
         <div className="section-heading">
           <div>
@@ -401,7 +397,7 @@ function ImportPrototype({ account, echo, message, preview, setAccount, setMessa
           <strong>{echo?.acknowledged ? echo.message : "Waiting for the server…"}</strong>
         </div>
       </section>
-    </main>
+    </div>
   );
 }
 
@@ -429,6 +425,9 @@ export default function App() {
     null,
     { priority: "event" },
   );
+  const [, setConfigurationSaveRequest] = useShinyInput<ConfigurationSaveRequest | null>(
+    "configuration_save_request", null, { priority: "event" },
+  );
   const [account, setAccount] = useShinyInput<Account>("account_slot", "checking", { debounceMs: 0 });
   const [message, setMessage] = useShinyInput("prototype_message", "Hello from React", { debounceMs: 0 });
   const overview = useShinyOutputValue<OverviewScreen | null>("overview_screen", null);
@@ -441,6 +440,10 @@ export default function App() {
     "transaction_save_result",
     null,
   );
+  const configurationScreen = useShinyOutputValue<ConfigurationScreen | null>("configuration_screen", null);
+  const configurationError = useShinyOutputError("configuration_screen");
+  const configurationStatus = useShinyOutputStatus("configuration_screen");
+  const configurationSaveResult = useShinyOutputValue<ConfigurationSaveResult | null>("configuration_save_result", null);
   const preview = useShinyOutputValue<ImportPreview | null>("import_preview", null);
   const echo = useShinyOutputValue<EchoResponse | null>("prototype_echo", null);
 
@@ -519,24 +522,26 @@ export default function App() {
             )}
           </button>
           <button
-            aria-current={view === "import" ? "page" : undefined}
-            onClick={() => setView("import")}
+            aria-current={view === "admin" ? "page" : undefined}
+            onClick={() => setView("admin")}
             type="button"
           >
-            Import prototype
+            Admin
           </button>
         </nav>
       </header>
 
-      {view === "import" ? (
-        <ImportPrototype
-          account={account}
-          echo={echo}
-          message={message}
-          preview={preview}
-          setAccount={setAccount}
-          setMessage={setMessage}
-        />
+      {view === "admin" ? (
+        configurationError ? <main><OutputError message={configurationError.message} /></main>
+        : !configurationScreen ? <main><LoadingPanel label="Loading configuration…" /></main>
+        : <div className={configurationStatus === "recalculating" ? "recalculating" : ""}>
+          <AdminView
+            screen={configurationScreen}
+            saveResult={configurationSaveResult ?? null}
+            onSave={setConfigurationSaveRequest}
+            importContent={<ImportPrototype account={account} echo={echo} message={message} preview={preview} setAccount={setAccount} setMessage={setMessage} />}
+          />
+        </div>
       ) : view === "transactions" || view === "review" ? (
         transactionError ? (
           <main><OutputError message={transactionError.message} /></main>

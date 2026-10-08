@@ -5,8 +5,9 @@ create_finance_app_server <- function(
 
   function(input, output, session) {
     connection <- connection_factory()
-    transaction_revision <- shiny::reactiveVal(0L)
+    data_revision <- shiny::reactiveVal(0L)
     transaction_save_result <- shiny::reactiveVal(list(status = "idle"))
+    configuration_save_result <- shiny::reactiveVal(list(status = "idle"))
     session$onSessionEnded(function() {
       disconnect_finance_database(connection)
     })
@@ -38,7 +39,7 @@ create_finance_app_server <- function(
     })
 
     output$overview_screen <- shinyreact::reactive_output({
-      transaction_revision()
+      data_revision()
       build_overview_screen_contract(
         connection = connection,
         selected_month = input$overview_month,
@@ -47,7 +48,7 @@ create_finance_app_server <- function(
     })
 
     output$transaction_screen <- shinyreact::reactive_output({
-      transaction_revision()
+      data_revision()
       build_transaction_screen_contract(
         connection = connection,
         filters = input$transaction_filters
@@ -56,6 +57,15 @@ create_finance_app_server <- function(
 
     output$transaction_save_result <- shinyreact::reactive_output({
       transaction_save_result()
+    })
+
+    output$configuration_screen <- shinyreact::reactive_output({
+      data_revision()
+      build_configuration_screen_contract(connection)
+    })
+
+    output$configuration_save_result <- shinyreact::reactive_output({
+      configuration_save_result()
     })
 
     shiny::observeEvent(
@@ -75,7 +85,7 @@ create_finance_app_server <- function(
             saved <- save_transaction_decision(connection, request)
 
             if (saved$status == "saved") {
-              transaction_revision(transaction_revision() + 1L)
+              data_revision(data_revision() + 1L)
             }
 
             saved
@@ -90,6 +100,31 @@ create_finance_app_server <- function(
         )
 
         transaction_save_result(result)
+      },
+      ignoreInit = TRUE
+    )
+
+    shiny::observeEvent(
+      input$configuration_save_request,
+      {
+        request <- input$configuration_save_request
+        request_id <- if (is.list(request) && "request_id" %in% names(request)) {
+          as.character(request$request_id)
+        } else {
+          NULL
+        }
+
+        result <- tryCatch(
+          {
+            saved <- save_configuration_change(connection, request)
+            if (saved$status == "saved") data_revision(data_revision() + 1L)
+            saved
+          },
+          error = function(error) {
+            list(status = "error", request_id = request_id, message = conditionMessage(error))
+          }
+        )
+        configuration_save_result(result)
       },
       ignoreInit = TRUE
     )

@@ -25,6 +25,17 @@
 - Repeating the same save request is idempotent.
 - Merchant-default creation and management remain deferred to configuration work.
 
+## Configuration administration
+
+- Admin keeps upload preview, merchant defaults, monthly budgets, and budget setup in one place.
+- Merchant defaults are searchable and expandable and can be created, edited, or deactivated, but never deleted.
+- Merchant changes affect future imports unless the user deliberately chooses to apply an active rule to matching existing transactions.
+- Every merchant save is server-validated, atomic, audited, and idempotent.
+- Monthly budget changes create immutable versions effective in the current or a future month; earlier months are never rewritten.
+- Every monthly budget version contains all five fixed categories and allocations sum exactly to its total.
+- Budget start month and all five opening balances are configured together and saved atomically with an audit trail.
+- Configuration saves refresh affected Overview, Transactions, and Admin data without reloading the application.
+
 ## Upload prototype
 
 - The page identifies itself as a technical prototype for Family finances.

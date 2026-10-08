@@ -397,6 +397,159 @@ main {
   background: var(--paper);
 }
 
+.text-field select {
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 10px 12px;
+  color: var(--ink);
+  background: var(--paper);
+}
+
+.admin-nav {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--border);
+}
+
+.admin-nav button {
+  min-height: 42px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  padding: 8px 12px;
+  white-space: nowrap;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+.admin-nav button[aria-current="page"] {
+  border-bottom-color: var(--current);
+  color: var(--ink);
+}
+
+.admin-import {
+  display: grid;
+  gap: 24px;
+}
+
+.admin-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.85fr) minmax(420px, 1.15fr);
+  align-items: start;
+  gap: 24px;
+}
+
+.admin-form,
+.admin-list-panel,
+.setup-form {
+  display: grid;
+  gap: 16px;
+}
+
+.setup-form {
+  max-width: 760px;
+}
+
+.merchant-list,
+.version-list {
+  display: grid;
+  max-height: 620px;
+  overflow-y: auto;
+  border-top: 1px solid var(--border);
+}
+
+.merchant-item {
+  display: flex;
+  min-height: 66px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  padding: 10px 4px;
+  text-align: left;
+  color: var(--ink);
+  background: transparent;
+  cursor: pointer;
+}
+
+.merchant-item.selected {
+  border-left: 3px solid var(--current);
+  padding-left: 10px;
+  background: var(--current-soft);
+}
+
+.merchant-item > span:first-child {
+  display: grid;
+}
+
+.merchant-item small,
+.field-help,
+.admin-form > div > p {
+  color: var(--muted);
+}
+
+.deliberate {
+  border-color: var(--warning);
+  background: var(--warning-soft);
+}
+
+.field-help {
+  margin: -6px 0 0;
+  font-size: 0.86rem;
+}
+
+.allocation-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.budget-total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+}
+
+.budget-total strong {
+  font-family: "Azeret Mono", monospace;
+  font-size: 1.35rem;
+}
+
+.version-list details {
+  border-bottom: 1px solid var(--border);
+  padding: 12px 0;
+}
+
+.version-list summary,
+.version-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.version-list summary {
+  cursor: pointer;
+}
+
+.version-list ul {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0 0;
+  padding: 12px 0 0;
+  border-top: 1px solid var(--border);
+  list-style: none;
+}
+
+.version-list li {
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
 .echo {
   display: grid;
   min-height: 68px;
@@ -956,6 +1109,11 @@ footer img {
 }
 
 @media (max-width: 760px) {
+  .admin-grid,
+  .allocation-fields {
+    grid-template-columns: 1fr;
+  }
+
   .app-shell {
     padding: 20px 16px;
   }

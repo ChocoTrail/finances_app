@@ -8,6 +8,7 @@ source(file.path(project_root, "R", "import_service.R"))
 source(file.path(project_root, "R", "prototype_contracts.R"))
 source(file.path(project_root, "R", "overview_service.R"))
 source(file.path(project_root, "R", "transaction_service.R"))
+source(file.path(project_root, "R", "configuration_service.R"))
 source(file.path(project_root, "R", "app_server.R"))
 
 empty_prototype_seed <- function() {

@@ -7,6 +7,7 @@ source(file.path("R", "import_service.R"))
 source(file.path("R", "prototype_contracts.R"))
 source(file.path("R", "overview_service.R"))
 source(file.path("R", "transaction_service.R"))
+source(file.path("R", "configuration_service.R"))
 source(file.path("R", "app_server.R"))
 
 ui <- shinyreact::page_react(title = "Family finances")
