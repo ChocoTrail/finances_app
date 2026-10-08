@@ -488,6 +488,7 @@ export default function App() {
 
   return (
     <div className={busy ? "app-shell busy" : "app-shell"}>
+      <a className="skip-link" href="#main-content">Skip to main content</a>
       <div className="activity-line" aria-hidden="true" />
       <header className="site-header">
         <a className="product-name" href="#" onClick={(event) => {
@@ -505,11 +506,13 @@ export default function App() {
             Overview
           </button>
           <button
+            aria-label="Transactions"
             aria-current={view === "transactions" ? "page" : undefined}
             onClick={openTransactionHistory}
             type="button"
           >
-            Transactions
+            <span className="nav-label-full">Transactions</span>
+            <span className="nav-label-compact" aria-hidden="true">History</span>
           </button>
           <button
             aria-current={view === "review" ? "page" : undefined}
@@ -531,49 +534,51 @@ export default function App() {
         </nav>
       </header>
 
-      {view === "admin" ? (
-        configurationError ? <main><OutputError message={configurationError.message} /></main>
-        : !configurationScreen ? <main><LoadingPanel label="Loading configuration…" /></main>
-        : <div className={configurationStatus === "recalculating" ? "recalculating" : ""}>
-          <AdminView
-            screen={configurationScreen}
-            saveResult={configurationSaveResult ?? null}
-            onSave={setConfigurationSaveRequest}
-            importContent={<ImportPrototype account={account} echo={echo} message={message} preview={preview} setAccount={setAccount} setMessage={setMessage} />}
-          />
-        </div>
-      ) : view === "transactions" || view === "review" ? (
-        transactionError ? (
-          <main><OutputError message={transactionError.message} /></main>
-        ) : !transactionScreen ? (
-          <main><LoadingPanel label="Loading transactions…" /></main>
-        ) : (
-          <div className={transactionStatus === "recalculating" ? "recalculating" : ""}>
-            <TransactionsView
-              filters={transactionFilters}
-              isReviewQueue={view === "review"}
-              onBack={() => setView("overview")}
-              onFiltersChange={setTransactionFilters}
-              onReset={resetTransactionFilters}
-              onSave={setTransactionSaveRequest}
-              saveResult={transactionSaveResult}
-              screen={transactionScreen}
+      <div id="main-content" tabIndex={-1}>
+        {view === "admin" ? (
+          configurationError ? <main><OutputError message={configurationError.message} /></main>
+          : !configurationScreen ? <main><LoadingPanel label="Loading configuration…" /></main>
+          : <div className={configurationStatus === "recalculating" ? "recalculating" : ""}>
+            <AdminView
+              screen={configurationScreen}
+              saveResult={configurationSaveResult ?? null}
+              onSave={setConfigurationSaveRequest}
+              importContent={<ImportPrototype account={account} echo={echo} message={message} preview={preview} setAccount={setAccount} setMessage={setMessage} />}
             />
           </div>
-        )
-      ) : overviewError ? (
-        <main><OutputError message={overviewError.message} /></main>
-      ) : !overview ? (
-        <main><LoadingPanel label="Loading your budget…" /></main>
-      ) : (
-        <div className={overviewStatus === "recalculating" ? "recalculating" : ""}>
-          <OverviewView
-            overview={overview}
-            onMonthChange={changeMonth}
-            onSelectCategory={openCategory}
-          />
-        </div>
-      )}
+        ) : view === "transactions" || view === "review" ? (
+          transactionError ? (
+            <main><OutputError message={transactionError.message} /></main>
+          ) : !transactionScreen ? (
+            <main><LoadingPanel label="Loading transactions…" /></main>
+          ) : (
+            <div className={transactionStatus === "recalculating" ? "recalculating" : ""}>
+              <TransactionsView
+                filters={transactionFilters}
+                isReviewQueue={view === "review"}
+                onBack={() => setView("overview")}
+                onFiltersChange={setTransactionFilters}
+                onReset={resetTransactionFilters}
+                onSave={setTransactionSaveRequest}
+                saveResult={transactionSaveResult}
+                screen={transactionScreen}
+              />
+            </div>
+          )
+        ) : overviewError ? (
+          <main><OutputError message={overviewError.message} /></main>
+        ) : !overview ? (
+          <main><LoadingPanel label="Loading your budget…" /></main>
+        ) : (
+          <div className={overviewStatus === "recalculating" ? "recalculating" : ""}>
+            <OverviewView
+              overview={overview}
+              onMonthChange={changeMonth}
+              onSelectCategory={openCategory}
+            />
+          </div>
+        )}
+      </div>
 
       <footer>
         <span>A Choco Trail project</span>

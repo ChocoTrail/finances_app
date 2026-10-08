@@ -27,12 +27,22 @@
   --muted: #5f6969;
   --current: #2f6f73;
   --current-soft: #dce8e7;
+  --comet-dust: #8b5e62;
   --warning: #7a5b22;
   --warning-soft: #eee4cf;
   --success: #42634a;
   --success-soft: #e1e8de;
   --error: #a24e3f;
   --error-soft: #f0dcd8;
+  --panel: rgba(255, 255, 255, 0.2);
+  --radius-surface: 3px;
+  --radius-control: 4px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --target-size: 44px;
 }
 
 * {
@@ -43,19 +53,41 @@ body {
   margin: 0;
   min-width: 320px;
   background: var(--paper);
+  font-variation-settings: "CASL" 0, "MONO" 0, "slnt" 0, "CRSV" 0.5;
 }
 
 button,
-input {
+input,
+select,
+textarea {
   font: inherit;
 }
 
-button:focus-visible,
-input:focus-visible,
-a:focus-visible,
+:where(button, input, select, textarea, summary, a):focus-visible,
 .account-option:has(input:focus-visible) {
-  outline: 2px solid var(--current);
-  outline-offset: 3px;
+  outline: 2px solid var(--paper);
+  outline-offset: 1px;
+  box-shadow: 0 0 0 4px var(--current);
+}
+
+#main-content:focus {
+  outline: none;
+}
+
+.skip-link {
+  position: fixed;
+  z-index: 20;
+  top: var(--space-3);
+  left: var(--space-3);
+  transform: translateY(-180%);
+  border-radius: var(--radius-control);
+  padding: var(--space-2) var(--space-3);
+  color: var(--paper);
+  background: var(--ink);
+}
+
+.skip-link:focus {
+  transform: translateY(0);
 }
 
 .app-shell {
@@ -111,7 +143,7 @@ footer {
 }
 
 .site-header nav button {
-  min-height: 40px;
+  min-height: var(--target-size);
   border: 0;
   border-bottom: 2px solid transparent;
   padding: 8px 12px;
@@ -120,9 +152,19 @@ footer {
   cursor: pointer;
 }
 
+.site-header nav button:hover,
+.admin-nav button:hover {
+  color: var(--ink);
+  background: var(--current-soft);
+}
+
 .site-header nav button[aria-current="page"] {
   border-bottom-color: var(--current);
   color: var(--ink);
+}
+
+.nav-label-compact {
+  display: none;
 }
 
 .nav-count {
@@ -201,15 +243,25 @@ h2 {
 
 main {
   display: grid;
+  width: 100%;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr);
   gap: 24px;
   padding: 24px 0 32px;
 }
 
+#main-content,
+#main-content > div,
+.admin-grid,
+.admin-grid > * {
+  min-width: 0;
+}
+
 .panel {
   border: 1px solid var(--border);
-  border-radius: 3px;
+  border-radius: var(--radius-surface);
   padding: 24px;
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--panel);
 }
 
 .section-heading > p {
@@ -238,13 +290,17 @@ main {
 
 .account-option {
   display: flex;
-  min-height: 44px;
+  min-height: var(--target-size);
   align-items: center;
   gap: 8px;
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--radius-control);
   padding: 10px 12px;
   cursor: pointer;
+}
+
+.account-option:hover {
+  border-color: var(--current);
 }
 
 .account-option.selected {
@@ -386,24 +442,42 @@ main {
 
 .text-field {
   display: grid;
+  min-width: 0;
 }
 
 .text-field input {
-  min-height: 44px;
+  width: 100%;
+  min-width: 0;
+  min-height: var(--target-size);
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--radius-control);
   padding: 10px 12px;
   color: var(--ink);
   background: var(--paper);
 }
 
 .text-field select {
-  min-height: 44px;
+  width: 100%;
+  min-width: 0;
+  min-height: var(--target-size);
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--radius-control);
   padding: 10px 12px;
   color: var(--ink);
   background: var(--paper);
+}
+
+.text-field input:hover,
+.text-field select:hover,
+.filter-field input:hover,
+.filter-field select:hover,
+.filter-field textarea:hover {
+  border-color: var(--muted);
+}
+
+:where(.text-field, .filter-field) :where(input, select, textarea):user-invalid {
+  border-color: var(--error);
+  background: var(--error-soft);
 }
 
 .admin-nav {
@@ -414,7 +488,7 @@ main {
 }
 
 .admin-nav button {
-  min-height: 42px;
+  min-height: var(--target-size);
   border: 0;
   border-bottom: 3px solid transparent;
   padding: 8px 12px;
@@ -445,6 +519,8 @@ main {
 .admin-list-panel,
 .setup-form {
   display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
 }
 
@@ -475,6 +551,10 @@ main {
   cursor: pointer;
 }
 
+.merchant-item:hover {
+  background: var(--surface);
+}
+
 .merchant-item.selected {
   border-left: 3px solid var(--current);
   padding-left: 10px;
@@ -491,9 +571,16 @@ main {
   color: var(--muted);
 }
 
-.deliberate {
+.deliberate.selected {
   border-color: var(--warning);
   background: var(--warning-soft);
+}
+
+.check-field:has(input:disabled) {
+  border-color: var(--border);
+  color: var(--muted);
+  background: var(--surface);
+  cursor: not-allowed;
 }
 
 .field-help {
@@ -533,6 +620,8 @@ main {
 }
 
 .version-list summary {
+  min-height: var(--target-size);
+  align-items: center;
   cursor: pointer;
 }
 
@@ -586,8 +675,8 @@ main {
   grid-template-columns: 44px minmax(145px, auto) 44px;
   align-items: stretch;
   border: 1px solid var(--border);
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-control);
+  background: var(--panel);
 }
 
 .month-navigation button {
@@ -597,6 +686,10 @@ main {
   color: var(--current);
   background: transparent;
   cursor: pointer;
+}
+
+.month-navigation button:not(:disabled):hover {
+  background: var(--current-soft);
 }
 
 .month-navigation button:disabled {
@@ -690,11 +783,11 @@ main {
   min-height: 244px;
   align-content: start;
   border: 1px solid var(--border);
-  border-radius: 3px;
+  border-radius: var(--radius-surface);
   padding: 20px;
   color: var(--ink);
   text-align: left;
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--panel);
   cursor: pointer;
 }
 
@@ -772,12 +865,17 @@ main {
 
 .back-link {
   width: fit-content;
-  min-height: 40px;
+  min-height: var(--target-size);
   border: 0;
   padding: 0 4px;
   color: var(--current);
   background: transparent;
   cursor: pointer;
+}
+
+.back-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .transactions-heading {
@@ -841,6 +939,12 @@ main {
 .treatment-category_offset {
   border-color: var(--current);
   background: var(--current-soft);
+}
+
+.treatment-category_offset {
+  border-color: var(--comet-dust);
+  color: var(--comet-dust);
+  background: var(--paper);
 }
 
 .transaction-amount {
@@ -911,9 +1015,9 @@ main {
 .filter-field select,
 .filter-field textarea {
   width: 100%;
-  min-height: 42px;
+  min-height: var(--target-size);
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--radius-control);
   padding: 8px 10px;
   color: var(--ink);
   background: var(--paper);
@@ -934,11 +1038,25 @@ main {
 
 .primary-button,
 .secondary-button {
-  min-height: 42px;
-  border-radius: 4px;
+  min-height: var(--target-size);
+  border-radius: var(--radius-control);
   padding: 8px 12px;
   font-weight: 500;
   cursor: pointer;
+}
+
+.primary-button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--current) 86%, var(--ink));
+}
+
+.secondary-button:hover:not(:disabled) {
+  border-color: var(--current);
+  background: var(--current-soft);
+}
+
+.primary-button:active:not(:disabled),
+.secondary-button:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
 .primary-button {
@@ -977,7 +1095,7 @@ main {
 
 .maintenance-row.editing {
   border-left: 3px solid var(--current);
-  background: rgba(220, 232, 231, 0.34);
+  background: color-mix(in srgb, var(--current-soft) 34%, transparent);
 }
 
 .transaction-summary {
@@ -1033,7 +1151,7 @@ main {
   height: 44px;
   place-items: center;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: var(--radius-control);
   color: var(--ink);
   background: transparent;
   letter-spacing: 2px;
@@ -1065,11 +1183,11 @@ main {
 
 .check-field {
   display: flex;
-  min-height: 42px;
+  min-height: var(--target-size);
   align-items: center;
   gap: 8px;
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--radius-control);
   padding: 8px 10px;
   background: var(--paper);
   cursor: pointer;
@@ -1118,6 +1236,13 @@ footer img {
     padding: 20px 16px;
   }
 
+  .admin-nav {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0;
+    overflow: visible;
+  }
+
   .section-heading,
   .overview-heading,
   .transactions-heading,
@@ -1138,6 +1263,7 @@ footer img {
 
   .site-header nav button {
     min-width: 0;
+    min-height: var(--target-size);
     padding: 7px 3px;
     font-size: 0.78rem;
   }
@@ -1253,6 +1379,40 @@ footer img {
 
   .panel {
     padding: 16px;
+  }
+}
+
+@media (max-width: 420px) {
+  .transaction-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .filter-field,
+  .search-filter,
+  .reset-filters {
+    grid-column: 1;
+  }
+}
+
+@media (max-width: 340px) {
+  .site-header nav button {
+    font-size: 0.72rem;
+  }
+
+  .nav-label-full {
+    display: none;
+  }
+
+  .nav-label-compact {
+    display: inline;
+  }
+
+  .nav-count {
+    min-width: 17px;
+    height: 17px;
+    margin-left: 3px;
+    padding: 0 4px;
+    font-size: 0.6rem;
   }
 }
 

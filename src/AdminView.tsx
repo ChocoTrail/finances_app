@@ -65,6 +65,7 @@ function MerchantAdmin({ screen, onSave, result }: {
 }) {
   const [search, setSearch] = React.useState("");
   const [selected, setSelected] = React.useState<Merchant | null>(null);
+  const [submittedRequestId, setSubmittedRequestId] = React.useState<string | null>(null);
   const [form, setForm] = React.useState({
     display_name: "", description_pattern: "", category_code: screen.categories[0]?.value ?? "",
     effective_date: new Date().toISOString().slice(0, 10), is_active: true, apply_existing: false,
@@ -74,19 +75,25 @@ function MerchantAdmin({ screen, onSave, result }: {
   );
   const startNew = () => {
     setSelected(null);
+    setSubmittedRequestId(null);
     setForm({ display_name: "", description_pattern: "", category_code: screen.categories[0]?.value ?? "",
       effective_date: new Date().toISOString().slice(0, 10), is_active: true, apply_existing: false });
   };
   const edit = (merchant: Merchant) => {
     setSelected(merchant);
+    setSubmittedRequestId(null);
     setForm({ display_name: merchant.display_name, description_pattern: merchant.description_pattern,
       category_code: merchant.category_code, effective_date: merchant.effective_date,
       is_active: merchant.is_active, apply_existing: false });
   };
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    onSave({ kind: "merchant", request_id: requestId("merchant"), rule_id: selected?.rule_id ?? null, ...form });
+    const nextRequestId = requestId("merchant");
+    setSubmittedRequestId(nextRequestId);
+    onSave({ kind: "merchant", request_id: nextRequestId, rule_id: selected?.rule_id ?? null, ...form });
   };
+  const matchingResult = result?.request_id === submittedRequestId ? result : null;
+  const isSaving = Boolean(submittedRequestId) && !matchingResult;
 
   return <section className="admin-grid" aria-labelledby="merchant-admin-title">
     <div className="panel admin-list-panel">
@@ -109,10 +116,10 @@ function MerchantAdmin({ screen, onSave, result }: {
         {screen.categories.map((category) => <option value={category.value} key={category.value}>{category.label}</option>)}</select></label>
       <label className="text-field"><span>Effective date</span><input type="date" required value={form.effective_date} onChange={(e) => setForm({ ...form, effective_date: e.target.value })} /></label>
       <label className="check-field"><input type="checkbox" checked={form.is_active} onChange={(e) => setForm({ ...form, is_active: e.target.checked, apply_existing: e.target.checked ? form.apply_existing : false })} /><span>Active for future imports</span></label>
-      <label className="check-field deliberate"><input type="checkbox" disabled={!form.is_active} checked={form.apply_existing} onChange={(e) => setForm({ ...form, apply_existing: e.target.checked })} /><span>Also apply this rule to matching existing transactions</span></label>
+      <label className={form.apply_existing ? "check-field deliberate selected" : "check-field deliberate"}><input type="checkbox" disabled={!form.is_active} checked={form.apply_existing} onChange={(e) => setForm({ ...form, apply_existing: e.target.checked })} /><span>Also apply this rule to matching existing transactions</span></label>
       <p className="field-help">Existing transactions stay unchanged unless you deliberately select the option above. Rules can be deactivated, not deleted.</p>
-      <SaveNotice result={result} />
-      <button className="primary-button" type="submit">Save merchant default</button>
+      <SaveNotice result={matchingResult} />
+      <button className="primary-button" disabled={isSaving} type="submit">{isSaving ? "Saving…" : "Save merchant default"}</button>
     </form>
   </section>;
 }
@@ -125,12 +132,17 @@ function BudgetAdmin({ screen, onSave, result }: {
     latest?.allocations.find((item) => item.category_code === category.value)?.amount ?? 0]));
   const [effectiveMonth, setEffectiveMonth] = React.useState(screen.default_effective_month);
   const [amounts, setAmounts] = React.useState<Record<string, number>>(initialAmounts);
+  const [submittedRequestId, setSubmittedRequestId] = React.useState<string | null>(null);
   const total = Object.values(amounts).reduce((sum, amount) => sum + Number(amount || 0), 0);
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    onSave({ kind: "budget_version", request_id: requestId("budget"), effective_month: effectiveMonth,
+    const nextRequestId = requestId("budget");
+    setSubmittedRequestId(nextRequestId);
+    onSave({ kind: "budget_version", request_id: nextRequestId, effective_month: effectiveMonth,
       total_monthly_budget: total, allocations: screen.categories.map((category) => ({ category_code: category.value, amount: Number(amounts[category.value]) })) });
   };
+  const matchingResult = result?.request_id === submittedRequestId ? result : null;
+  const isSaving = Boolean(submittedRequestId) && !matchingResult;
   return <div className="admin-grid">
     <form className="panel admin-form" onSubmit={submit}>
       <div><p className="eyebrow">New version</p><h2>Monthly budget</h2><p>Defaults to next month. You may choose the current month, but prior months stay unchanged.</p></div>
@@ -138,8 +150,8 @@ function BudgetAdmin({ screen, onSave, result }: {
       <div className="allocation-fields">{screen.categories.map((category) => <label className="text-field" key={category.value}><span>{category.label}</span>
         <input min="0" step="0.01" type="number" value={amounts[category.value]} onChange={(e) => setAmounts({ ...amounts, [category.value]: Number(e.target.value) })} /></label>)}</div>
       <div className="budget-total"><span>Monthly total</span><strong>{money.format(total)}</strong></div>
-      <SaveNotice result={result} />
-      <button className="primary-button" type="submit">Create budget version</button>
+      <SaveNotice result={matchingResult} />
+      <button className="primary-button" disabled={isSaving} type="submit">{isSaving ? "Saving…" : "Create budget version"}</button>
     </form>
     <section className="panel"><p className="eyebrow">History</p><h2>Budget versions</h2><div className="version-list">
       {[...screen.budget_versions].reverse().map((version) => <details key={version.budget_version_id}><summary><span>{formatMonth(version.effective_month)}</span><strong>{money.format(version.total_monthly_budget)}</strong></summary>
@@ -154,19 +166,24 @@ function SetupAdmin({ screen, onSave, result }: {
   const [startMonth, setStartMonth] = React.useState((screen.budget_setup.budget_start_month ?? screen.current_month).slice(0, 7));
   const [amounts, setAmounts] = React.useState<Record<string, number>>(Object.fromEntries(screen.categories.map((category) => [category.value,
     screen.budget_setup.opening_balances.find((item) => item.category_code === category.value)?.amount ?? 0])));
+  const [submittedRequestId, setSubmittedRequestId] = React.useState<string | null>(null);
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    onSave({ kind: "opening_balances", request_id: requestId("opening"), budget_start_month: `${startMonth}-01`,
+    const nextRequestId = requestId("opening");
+    setSubmittedRequestId(nextRequestId);
+    onSave({ kind: "opening_balances", request_id: nextRequestId, budget_start_month: `${startMonth}-01`,
       opening_balances: screen.categories.map((category) => ({ category_code: category.value, amount: Number(amounts[category.value]) })) });
   };
+  const matchingResult = result?.request_id === submittedRequestId ? result : null;
+  const isSaving = Boolean(submittedRequestId) && !matchingResult;
   return <form className="panel admin-form setup-form" onSubmit={submit}>
     <div><p className="eyebrow">Rollover foundation</p><h2>Budget start and opening balances</h2><p>These five balances establish the amount carried into the first configured budget month.</p></div>
     <label className="text-field"><span>Budget start month</span><input max={screen.current_month.slice(0, 7)} required type="month" value={startMonth} onChange={(e) => setStartMonth(e.target.value)} /></label>
     <div className="allocation-fields">{screen.categories.map((category) => <label className="text-field" key={category.value}><span>{category.label}</span>
       <input step="0.01" type="number" value={amounts[category.value]} onChange={(e) => setAmounts({ ...amounts, [category.value]: Number(e.target.value) })} /></label>)}</div>
     <p className="field-help">Opening balances may be negative. The selected month must already have an effective budget version.</p>
-    <SaveNotice result={result} />
-    <button className="primary-button" type="submit">Save budget setup</button>
+    <SaveNotice result={matchingResult} />
+    <button className="primary-button" disabled={isSaving} type="submit">{isSaving ? "Saving…" : "Save budget setup"}</button>
   </form>;
 }
 

@@ -36,6 +36,15 @@
 - Budget start month and all five opening balances are configured together and saved atomically with an audit trail.
 - Configuration saves refresh affected Overview, Transactions, and Admin data without reloading the application.
 
+## Visual and interaction system
+
+- The checked-in Choco Trail colors, Recursive interface type, Azeret Mono numeric type, compact spacing, and measured corner radii apply consistently across every view.
+- Keyboard users can skip repeated navigation and every interactive control has a visible Current-and-Paper focus treatment.
+- Interactive targets are at least 44 pixels tall, with distinct hover, pressed, selected, disabled, loading, success, warning, and error states.
+- Semantic colors retain their defined meaning, and deficits, credits, review states, and failures also include a text or structural cue.
+- Phone layouts avoid page-level horizontal scrolling; navigation and forms reflow rather than clip.
+- Reduced-motion preferences remove nonessential interface transitions.
+
 ## Upload prototype
 
 - The page identifies itself as a technical prototype for Family finances.
