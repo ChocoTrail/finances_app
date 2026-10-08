@@ -120,6 +120,14 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
   timeZone: "UTC",
 });
 
+const overviewCategoryOrder = [
+  "food_living",
+  "personal_discretionary",
+  "transportation",
+  "rainy_day",
+  "housing",
+];
+
 function localCurrentMonth() {
   const today = new Date();
   const year = today.getFullYear();
@@ -231,10 +239,9 @@ function CategoryCardView({ category, monthLabel, onSelect }: {
   monthLabel: string;
   onSelect: (categoryCode: string) => void;
 }) {
-  const progress = Math.max(
-    0,
-    Math.min(100, (category.net_spending / category.monthly_allocation) * 100),
-  );
+  const progress = category.monthly_allocation > 0
+    ? Math.max(0, Math.min(100, (category.net_spending / category.monthly_allocation) * 100))
+    : 0;
   const spendingText = category.net_spending < 0
     ? `${currency.format(Math.abs(category.net_spending))} net credit`
     : `${currency.format(category.net_spending)} spent`;
@@ -247,16 +254,18 @@ function CategoryCardView({ category, monthLabel, onSelect }: {
       type="button"
     >
       <span className="card-title">{category.name}</span>
-      <span className="balance-label">
-        {category.balance_state === "deficit" ? "Deficit" : "Available"}
-      </span>
-      <strong className="category-balance">{currency.format(category.available_balance)}</strong>
+      <span className="budget-label">Monthly budget</span>
+      <strong className="category-budget">{currency.format(category.monthly_allocation)}</strong>
       <span className="spending-line">
         <span>{spendingText}</span>
-        <span>{currency.format(category.monthly_allocation)} allocated</span>
+        <span>{progress.toFixed(0)}%</span>
       </span>
       <span className="progress-track" aria-hidden="true">
         <span style={{ width: `${progress}%` }} />
+      </span>
+      <span className="rollover-balance">
+        <span>{category.balance_state === "deficit" ? "Balance with rollover" : "Available with rollover"}</span>
+        <strong>{currency.format(category.available_balance)}</strong>
       </span>
       <span className="card-link">View transactions <span aria-hidden="true">→</span></span>
     </button>
@@ -268,15 +277,34 @@ function OverviewView({ overview, onMonthChange, onSelectCategory }: {
   onMonthChange: (month: string) => void;
   onSelectCategory: (categoryCode: string) => void;
 }) {
+  const totalMonthlyBudget = overview.categories.reduce(
+    (total, category) => total + category.monthly_allocation,
+    0,
+  );
+  const orderedCategories = [...overview.categories].sort((left, right) => {
+    const leftIndex = overviewCategoryOrder.indexOf(left.category_code);
+    const rightIndex = overviewCategoryOrder.indexOf(right.category_code);
+    return (leftIndex === -1 ? overviewCategoryOrder.length : leftIndex)
+      - (rightIndex === -1 ? overviewCategoryOrder.length : rightIndex);
+  });
+
   return (
     <main>
       <section className="overview-heading" aria-labelledby="overview-title">
         <div>
           <p className="eyebrow">Overview</p>
-          <h1 id="overview-title">Your rollover budget</h1>
-          <p className="lede">Each category carries its own balance forward month to month.</p>
+          <h1 id="overview-title">Your monthly budget</h1>
+          <p className="lede">See what you planned for this month and how spending is tracking.</p>
         </div>
         <MonthNavigation overview={overview} onChange={onMonthChange} />
+      </section>
+
+      <section className="budget-summary" aria-labelledby="budget-total-title">
+        <div>
+          <p className="eyebrow">Total monthly budget</p>
+          <h2 id="budget-total-title">{currency.format(totalMonthlyBudget)}</h2>
+        </div>
+        <p>{overview.month_label} · allocated across {overview.categories.length} categories</p>
       </section>
 
       <AccountFreshnessList accounts={overview.accounts} />
@@ -284,13 +312,13 @@ function OverviewView({ overview, onMonthChange, onSelectCategory }: {
       <section aria-labelledby="categories-title">
         <div className="section-heading compact-heading">
           <div>
-            <p className="eyebrow">Available by category</p>
+            <p className="eyebrow">Monthly budget by category</p>
             <h2 id="categories-title">{overview.month_label}</h2>
           </div>
-          <p>Available includes this month’s allocation and all earlier rollover.</p>
+          <p>Rollover balances are shown as supporting context.</p>
         </div>
         <div className="category-grid">
-          {overview.categories.map((category) => (
+          {orderedCategories.map((category) => (
             <CategoryCardView
               category={category}
               key={category.category_code}

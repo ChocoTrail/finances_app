@@ -151,9 +151,12 @@ Rscript -e 'shiny::runApp(".")'
 ## Read-only Overview
 
 Overview defaults to the current month and reads its five category cards from
-the database-backed rollover ledger. Each card shows the independently carried
-available balance plus current-month net spending and allocation. Deficits are
-labeled explicitly as well as styled with the designated error color.
+the database-backed rollover ledger. A total monthly budget summary leads into
+category cards ordered around everyday spending first and housing last. Each
+card emphasizes the current month's allocation and spending progress. The
+independently carried rollover balance appears as supporting context, with
+negative balances indicated by a restrained error-colored value rather than a
+prominent deficit treatment.
 
 The update context reports the latest successful coverage date for checking
 and both credit cards. Selecting a category opens a read-only transaction list
