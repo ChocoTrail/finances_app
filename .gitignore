@@ -1,5 +1,6 @@
 .DS_Store
 .Renviron
+node_modules/
 data/raw/*.csv
 data/raw/*.CSV
 data/private/*.csv

@@ -11,10 +11,11 @@ protected April through September 2026 baseline, and the versioned local
 DuckDB schema, initial seed, and database-equivalence checks from implementation
 steps 1 through 3. The `choco_trail.finances_app` MotherDuck schema is
 initialized with the same validated history, completing step 4. The
-preview-first atomic import service is implemented for step 5. The ShinyReact
-interface and deployment configuration described in
-[`docs/application-design.md`](docs/application-design.md) have not yet been
-implemented.
+preview-first atomic import service is implemented for step 5. The Step 6
+ShinyReact prototype proves the supported file-upload path and a typed JSON
+exchange between the React client and R server. The read-only application
+screens and deployment configuration described in
+[`docs/application-design.md`](docs/application-design.md) remain to be built.
 
 ## Current workflow
 
@@ -107,6 +108,33 @@ Run the import regression suite with:
 
 ```sh
 Rscript tests/test-import-service.R
+```
+
+## ShinyReact prototype
+
+The prototype keeps client source in `src/`, builds committed assets to
+`www/ui.js` and `www/ui.css`, and uses a genuine Shiny file input hosted inside
+the React interface. Upload preview responses expose aggregate counts and
+validation problems, not transaction descriptions.
+
+Install the locked frontend dependencies and rebuild the client with:
+
+```sh
+npm install
+npm run check
+npm run build
+```
+
+Run the prototype contract and server behavior checks with:
+
+```sh
+Rscript tests/testthat.R
+```
+
+Start the app locally with:
+
+```sh
+Rscript -e 'shiny::runApp(".")'
 ```
 
 Private transaction overrides belong in `data/private/`. Files in that
