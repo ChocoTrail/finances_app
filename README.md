@@ -9,9 +9,9 @@ Real account exports belong in `data/raw/`. CSV files in that directory are igno
 The repository contains the validated local transaction pipeline, its
 protected April through September 2026 baseline, and the versioned local
 DuckDB schema, initial seed, and database-equivalence checks from implementation
-steps 1 through 3. The preview-first MotherDuck connection is configured, but
-the production schema has not been initialized. The import service, ShinyReact
-interface, and deployment configuration described in
+steps 1 through 3. The `choco_trail.finances_app` MotherDuck schema is
+initialized with the same validated history, completing step 4. The import
+service, ShinyReact interface, and deployment configuration described in
 [`docs/application-design.md`](docs/application-design.md) have not yet been
 implemented.
 
@@ -82,6 +82,10 @@ Rscript scripts/06_initialize_motherduck.R
 Do not use `--write` until the preview target and aggregate counts have been
 reviewed. The complete initialization, validation, and recovery procedure is in
 [`docs/motherduck-operations.md`](docs/motherduck-operations.md).
+
+The production schema has been initialized and independently validated against
+the protected local pipeline. Re-running the preview is safe and reports the
+persisted table counts without changing data.
 
 Private transaction overrides belong in `data/private/`. Files in that
 directory are ignored by Git and will eventually be replaced by durable MotherDuck table(s).
