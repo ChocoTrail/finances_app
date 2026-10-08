@@ -8,10 +8,11 @@ Real account exports belong in `data/raw/`. CSV files in that directory are igno
 
 The repository contains the validated local transaction pipeline, its
 protected April through September 2026 baseline, and the versioned local
-DuckDB schema and initial seed from implementation steps 1 and 2. MotherDuck,
-the import service, ShinyReact interface, and deployment configuration
-described in [`docs/application-design.md`](docs/application-design.md) have
-not yet been implemented.
+DuckDB schema, initial seed, and database-equivalence checks from implementation
+steps 1 through 3. MotherDuck, the import service, ShinyReact interface, and
+deployment configuration described in
+[`docs/application-design.md`](docs/application-design.md) have not yet been
+implemented.
 
 ## Current workflow
 
@@ -48,6 +49,20 @@ categories, current transactions and decisions, merchant rules, April 2026
 budget version, and zero opening balances. It refuses to overwrite a database
 that already contains seed data. Local `.duckdb` files under `data/local/` are
 ignored by Git.
+
+Validate that the local database reproduces the protected transaction
+decisions, merchant rules, category spending, and monthly rollover ledger with:
+
+```sh
+Rscript scripts/05_validate_database_equivalence.R
+```
+
+The corresponding regression checks, including effective-month budget versions
+and category-specific opening balances, run with:
+
+```sh
+Rscript tests/test-database-equivalence.R
+```
 
 Private transaction overrides belong in `data/private/`. Files in that
 directory are ignored by Git and will eventually be replaced by durable MotherDuck table(s).
