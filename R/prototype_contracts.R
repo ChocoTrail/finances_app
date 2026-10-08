@@ -69,10 +69,3 @@ format_import_preview_error <- function(message) {
   contract$message <- message
   contract
 }
-
-format_prototype_echo <- function(message) {
-  list(
-    acknowledged = TRUE,
-    message = as.character(message)
-  )
-}

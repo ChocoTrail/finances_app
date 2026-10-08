@@ -498,7 +498,14 @@ prepare_import_decision_audit <- function(decisions, imported_at) {
     )
 }
 
-new_database_import_id <- function(connection) {
+new_database_import_id <- function(connection, confirmation_id = NULL) {
+  if (!is.null(confirmation_id)) {
+    return(make_stable_id(
+      "import",
+      paste("confirmed_import", confirmation_id, sep = "|")
+    ))
+  }
+
   paste0(
     "import_",
     DBI::dbGetQuery(
@@ -513,7 +520,8 @@ confirm_transaction_import <- function(
   preview,
   confirmed_account,
   confirmed_filename,
-  imported_at = Sys.time()
+  imported_at = Sys.time(),
+  confirmation_id = NULL
 ) {
   if (!inherits(preview, "finance_import_preview")) {
     stop("A valid import preview is required.", call. = FALSE)
@@ -540,7 +548,39 @@ confirm_transaction_import <- function(
     )
   }
 
-  import_id <- new_database_import_id(connection)
+  import_id <- new_database_import_id(connection, confirmation_id)
+  prior_import <- DBI::dbGetQuery(
+    connection,
+    paste(
+      "SELECT account, source_filename, coverage_start, coverage_end,",
+      "posted_row_count, new_transaction_count, known_transaction_count",
+      "FROM imports WHERE import_id = ?"
+    ),
+    params = list(import_id)
+  )
+
+  if (nrow(prior_import) > 0) {
+    same_request <- identical(prior_import$account[[1]], preview$account) &&
+      identical(prior_import$source_filename[[1]], preview$source_filename) &&
+      identical(as.Date(prior_import$coverage_start[[1]]), preview$coverage_start) &&
+      identical(as.Date(prior_import$coverage_end[[1]]), preview$coverage_end)
+
+    if (!same_request) {
+      stop("Import confirmation ID was already used for another preview.", call. = FALSE)
+    }
+
+    return(invisible(list(
+      status = "already_saved",
+      import_id = import_id,
+      account = prior_import$account[[1]],
+      source_filename = prior_import$source_filename[[1]],
+      coverage_start = as.Date(prior_import$coverage_start[[1]]),
+      coverage_end = as.Date(prior_import$coverage_end[[1]]),
+      posted_transaction_count = prior_import$posted_row_count[[1]],
+      new_transaction_count = prior_import$new_transaction_count[[1]],
+      known_transaction_count = prior_import$known_transaction_count[[1]]
+    )))
+  }
   import_row <- tibble::tibble(
     import_id = import_id,
     account = preview$account,
@@ -591,6 +631,7 @@ confirm_transaction_import <- function(
   })
 
   invisible(list(
+    status = "saved",
     import_id = import_id,
     account = preview$account,
     source_filename = preview$source_filename,
@@ -600,4 +641,57 @@ confirm_transaction_import <- function(
     new_transaction_count = preview$new_transaction_count,
     known_transaction_count = preview$known_transaction_count
   ))
+}
+
+normalize_import_confirmation_request <- function(request) {
+  required <- c(
+    "request_id",
+    "confirmed_account",
+    "confirmed_filename",
+    "account_and_dates_verified"
+  )
+  missing <- setdiff(required, names(request))
+
+  if (is.null(request) || length(missing) > 0) {
+    stop(
+      "Import confirmation request is missing: ",
+      paste(missing, collapse = ", "),
+      call. = FALSE
+    )
+  }
+
+  request_id <- as.character(request$request_id)
+  confirmed_filename <- as.character(request$confirmed_filename)
+  verified <- request$account_and_dates_verified
+
+  if (
+    length(request_id) != 1 ||
+      is.na(request_id) ||
+      !grepl("^[A-Za-z0-9._:-]{8,128}$", request_id)
+  ) {
+    stop("Import confirmation request ID is invalid.", call. = FALSE)
+  }
+  confirmed_account <- validate_import_account(
+    as.character(request$confirmed_account)
+  )
+  if (
+    length(confirmed_filename) != 1 ||
+      is.na(confirmed_filename) ||
+      !nzchar(trimws(confirmed_filename)) ||
+      nchar(confirmed_filename) > 255
+  ) {
+    stop("Import confirmation filename is invalid.", call. = FALSE)
+  }
+  if (length(verified) != 1 || !is.logical(verified) || is.na(verified) || !verified) {
+    stop(
+      "Confirm the account slot and complete-day coverage before importing.",
+      call. = FALSE
+    )
+  }
+
+  list(
+    request_id = request_id,
+    confirmed_account = confirmed_account,
+    confirmed_filename = confirmed_filename
+  )
 }

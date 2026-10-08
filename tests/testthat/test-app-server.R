@@ -1,14 +1,3 @@
-test_that("server returns acknowledged JSON", {
-  server <- create_finance_app_server(prototype_connection_factory)
-
-  shiny::testServer(server, {
-    session$setInputs(prototype_message = "Bridge is working")
-
-    expect_true(output$prototype_echo$acknowledged)
-    expect_equal(output$prototype_echo$message, "Bridge is working")
-  })
-})
-
 test_that("server returns the selected Overview slice", {
   server <- create_finance_app_server(overview_connection_factory)
 
@@ -28,6 +17,27 @@ test_that("server returns the selected Overview slice", {
       output$overview_screen$transactions[[1]]$description,
       "TARGET STORE"
     )
+  })
+})
+
+test_that("server exposes a recoverable database connection failure", {
+  attempts <- 0L
+  retrying_factory <- function() {
+    attempts <<- attempts + 1L
+    if (attempts == 1L) stop("Simulated database outage.", call. = FALSE)
+    prototype_connection_factory()
+  }
+  server <- create_finance_app_server(retrying_factory)
+
+  shiny::testServer(server, {
+    expect_equal(output$connection_status$status, "error")
+    expect_match(output$connection_status$message, "try again")
+
+    session$setInputs(connection_retry_request = "retry-connection-001")
+
+    expect_equal(output$connection_status$status, "ready")
+    expect_equal(output$overview_screen$status, "ready")
+    expect_equal(attempts, 2L)
   })
 })
 
@@ -115,6 +125,58 @@ test_that("server previews an uploaded CSV without writing it", {
     expect_equal(output$import_preview$posted_row_count, 2L)
     expect_equal(output$import_preview$new_transaction_count, 2L)
     expect_match(output$import_preview$account_slot_notice, "credit_card_jacob")
+  })
+})
+
+test_that("server confirms a preview once and refreshes transaction data", {
+  file_path <- write_prototype_export(tibble::tibble(
+    DATE = "10/01/2026",
+    DESCRIPTION = "NEW CONFIRMED SHOP",
+    AMOUNT = "-18.00",
+    `CHECK #` = NA_character_,
+    STATUS = "Posted"
+  ))
+  on.exit(unlink(file_path), add = TRUE)
+  server <- create_finance_app_server(prototype_connection_factory)
+
+  shiny::testServer(server, {
+    session$setInputs(
+      account_slot = "checking",
+      account_file = list(
+        name = "Checking.csv",
+        size = file.info(file_path)$size,
+        type = "text/csv",
+        datapath = file_path
+      ),
+      transaction_filters = list(
+        start_date = NULL,
+        end_date = NULL,
+        search = "NEW CONFIRMED SHOP"
+      )
+    )
+
+    expect_equal(output$import_preview$status, "ready")
+    session$setInputs(import_confirm_request = list(
+      request_id = "server-import-confirm-001",
+      confirmed_account = "checking",
+      confirmed_filename = "Checking.csv",
+      account_and_dates_verified = TRUE
+    ))
+
+    expect_equal(output$import_save_result$status, "saved")
+    expect_equal(output$import_save_result$new_transaction_count, 1L)
+    expect_equal(output$transaction_screen$total_count, 1L)
+
+    session$setInputs(
+      import_confirm_request = list(
+        request_id = "server-import-confirm-001",
+        confirmed_account = "checking",
+        confirmed_filename = "Checking.csv",
+        account_and_dates_verified = TRUE
+      ),
+      .priority = "event"
+    )
+    expect_equal(output$import_save_result$status, "already_saved")
   })
 })
 

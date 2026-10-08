@@ -31,10 +31,3 @@ test_that("preview contract exposes aggregates without transaction descriptions"
   expect_equal(contract$new_transaction_count, 1L)
   expect_false(grepl("PRIVATE DESCRIPTION", jsonlite::toJSON(contract)))
 })
-
-test_that("echo contract preserves the client message", {
-  expect_equal(
-    format_prototype_echo("Hello from React"),
-    list(acknowledged = TRUE, message = "Hello from React")
-  )
-})

@@ -183,12 +183,14 @@ footer {
 
 h1,
 h2,
+h3,
 p {
   margin-top: 0;
 }
 
 h1,
-h2 {
+h2,
+h3 {
   font-weight: 500;
   letter-spacing: -0.02em;
 }
@@ -202,6 +204,11 @@ h1 {
 h2 {
   margin-bottom: 4px;
   font-size: 1.25rem;
+}
+
+h3 {
+  margin-bottom: 4px;
+  font-size: 1.05rem;
 }
 
 .eyebrow,
@@ -222,7 +229,6 @@ h2 {
 
 .lede,
 .section-heading > p,
-.bridge-panel p,
 .empty-state p,
 .confirmation-copy {
   color: var(--muted);
@@ -429,17 +435,6 @@ main {
   margin-bottom: 0;
 }
 
-.bridge-panel {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(240px, 0.8fr) minmax(220px, 0.7fr);
-  align-items: end;
-  gap: 24px;
-}
-
-.bridge-panel p {
-  margin-bottom: 0;
-}
-
 .text-field {
   display: grid;
   min-width: 0;
@@ -639,21 +634,48 @@ main {
   font-size: 0.88rem;
 }
 
-.echo {
+.import-confirmation {
   display: grid;
-  min-height: 68px;
-  align-content: center;
-  border-left: 2px solid var(--current);
-  padding: 8px 12px;
-  background: var(--current-soft);
+  gap: var(--space-4);
+  margin-top: var(--space-6);
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-6);
 }
 
-.echo span {
-  color: var(--current);
+.import-confirmation .primary-button {
+  justify-self: start;
 }
 
-.echo strong {
+.confirmation-details {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  margin: 0;
+  background: var(--border);
+}
+
+.confirmation-details div {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+  padding: var(--space-3);
+  background: var(--paper);
+}
+
+.confirmation-details dt {
+  color: var(--muted);
+  font-size: 0.72rem;
   font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.confirmation-details dd {
+  overflow-wrap: anywhere;
+  margin: 0;
+  font-family: "Azeret Mono", monospace;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .overview-heading,
@@ -987,6 +1009,28 @@ main {
   margin-top: 24px;
 }
 
+.connection-error {
+  min-height: 60vh;
+  align-content: center;
+  justify-items: center;
+}
+
+.connection-error-panel {
+  display: grid;
+  max-width: 620px;
+  justify-items: start;
+  border-left: 4px solid var(--error);
+  gap: var(--space-3);
+}
+
+.connection-error-panel h1 {
+  font-size: clamp(1.8rem, 4vw, 2.6rem);
+}
+
+.connection-error-panel p:not(.eyebrow) {
+  color: var(--muted);
+}
+
 .transaction-filters {
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
@@ -1298,7 +1342,7 @@ footer img {
 
   .account-options,
   .metrics-grid,
-  .bridge-panel,
+  .confirmation-details,
   .category-grid {
     grid-template-columns: 1fr;
   }

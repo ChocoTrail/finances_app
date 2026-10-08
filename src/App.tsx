@@ -1,5 +1,3 @@
-import type { ChangeEvent } from "react";
-
 import TransactionsView, {
   filtersForMonth,
   reviewQueueFilters,
@@ -82,9 +80,25 @@ type ImportPreview = {
   message?: string;
 };
 
-type EchoResponse = {
-  acknowledged: boolean;
-  message: string;
+type ImportConfirmRequest = {
+  request_id: string;
+  confirmed_account: Account;
+  confirmed_filename: string;
+  account_and_dates_verified: boolean;
+};
+
+type ImportSaveResult = {
+  status: "idle" | "saved" | "already_saved" | "error";
+  request_id?: string | null;
+  import_id?: string;
+  new_transaction_count?: number;
+  known_transaction_count?: number;
+  message?: string;
+};
+
+type ConnectionStatus = {
+  status: "ready" | "error";
+  message?: string;
 };
 
 const accounts: Array<{ value: Account; label: string }> = [
@@ -140,6 +154,24 @@ function OutputError({ message }: { message: string }) {
     <div className="notice notice-error screen-error" role="alert">
       <strong>Couldn’t load this view.</strong> {message}
     </div>
+  );
+}
+
+function ConnectionUnavailable({ message, onRetry }: {
+  message: string;
+  onRetry: () => void;
+}) {
+  return (
+    <main className="connection-error">
+      <div className="panel connection-error-panel" role="alert">
+        <p className="eyebrow">Connection unavailable</p>
+        <h1>We couldn’t reach the finance database</h1>
+        <p>{message}</p>
+        <button className="primary-button" onClick={onRetry} type="button">
+          Try again
+        </button>
+      </div>
+    </main>
   );
 }
 
@@ -272,9 +304,23 @@ function OverviewView({ overview, onMonthChange, onSelectCategory }: {
   );
 }
 
-function PreviewPanel({ preview }: { preview: ImportPreview | null | undefined }) {
+function PreviewPanel({ preview, onConfirm, saveResult }: {
+  preview: ImportPreview | null | undefined;
+  onConfirm: (request: ImportConfirmRequest) => void;
+  saveResult: ImportSaveResult | null | undefined;
+}) {
   const status = useShinyOutputStatus("import_preview");
   const error = useShinyOutputError("import_preview");
+  const [verified, setVerified] = React.useState(false);
+  const [requestId, setRequestId] = React.useState<string | null>(null);
+  const previewIdentity = preview && preview.status !== "waiting"
+    ? `${preview.account}|${preview.source_filename}|${preview.coverage_start}|${preview.coverage_end}|${preview.posted_row_count}`
+    : "waiting";
+
+  React.useEffect(() => {
+    setVerified(false);
+    setRequestId(null);
+  }, [previewIdentity]);
 
   if (error) return <OutputError message={error.message} />;
 
@@ -282,7 +328,7 @@ function PreviewPanel({ preview }: { preview: ImportPreview | null | undefined }
     return (
       <div className="empty-state">
         <p className="empty-title">No file selected</p>
-        <p>Choose an account export to test the supported upload path.</p>
+        <p>Choose an account export to preview it before anything is saved.</p>
       </div>
     );
   }
@@ -290,6 +336,22 @@ function PreviewPanel({ preview }: { preview: ImportPreview | null | undefined }
   if (preview.status === "error") {
     return <OutputError message={preview.message ?? "The preview failed."} />;
   }
+
+  const matchingResult = saveResult?.request_id === requestId ? saveResult : null;
+  const isSaving = Boolean(requestId) && !matchingResult;
+  const isSaved = matchingResult?.status === "saved" || matchingResult?.status === "already_saved";
+  const accountLabel = accounts.find((option) => option.value === preview.account)?.label ?? preview.account;
+  const confirm = () => {
+    if (!preview.account || !preview.source_filename) return;
+    const nextRequestId = `import-${crypto.randomUUID()}`;
+    setRequestId(nextRequestId);
+    onConfirm({
+      request_id: nextRequestId,
+      confirmed_account: preview.account,
+      confirmed_filename: preview.source_filename,
+      account_and_dates_verified: verified,
+    });
+  };
 
   return (
     <div className={status === "recalculating" ? "preview recalculating" : "preview"}>
@@ -330,17 +392,58 @@ function PreviewPanel({ preview }: { preview: ImportPreview | null | undefined }
         <p>{preview.account_slot_notice}</p>
         <p>{preview.complete_day_notice}</p>
       </div>
+
+      {preview.can_confirm && (
+        <section className="import-confirmation" aria-labelledby="confirm-import-title">
+          <div>
+            <p className="eyebrow">Final check</p>
+            <h3 id="confirm-import-title">Confirm this import</h3>
+          </div>
+          <dl className="confirmation-details">
+            <div><dt>Account</dt><dd>{accountLabel}</dd></div>
+            <div><dt>File</dt><dd>{preview.source_filename}</dd></div>
+            <div><dt>Coverage</dt><dd>{preview.coverage_start} – {preview.coverage_end}</dd></div>
+            <div><dt>Posted transactions</dt><dd>{preview.posted_row_count}</dd></div>
+          </dl>
+          <label className={verified ? "check-field deliberate selected" : "check-field deliberate"}>
+            <input
+              checked={verified}
+              disabled={isSaving || isSaved}
+              onChange={(event) => setVerified(event.target.checked)}
+              type="checkbox"
+            />
+            <span>I verified the account slot and that this export contains complete calendar days.</span>
+          </label>
+          {matchingResult?.status === "error" && (
+            <div className="notice notice-error" role="alert">
+              <strong>Import failed.</strong> {matchingResult.message}
+            </div>
+          )}
+          {isSaved && (
+            <div className="notice notice-success" role="status">
+              <strong>Import saved.</strong> {matchingResult?.new_transaction_count ?? 0} new and {matchingResult?.known_transaction_count ?? 0} known transactions were processed.
+            </div>
+          )}
+          <button
+            className="primary-button"
+            disabled={!verified || isSaving || isSaved}
+            onClick={confirm}
+            type="button"
+          >
+            {isSaving ? "Importing…" : isSaved ? "Import complete" : "Confirm import"}
+          </button>
+        </section>
+      )}
     </div>
   );
 }
 
-function ImportPrototype({ account, echo, message, preview, setAccount, setMessage }: {
+function ImportAdmin({ account, onConfirm, preview, saveResult, setAccount }: {
   account: Account;
-  echo: EchoResponse | null | undefined;
-  message: string;
+  onConfirm: (request: ImportConfirmRequest) => void;
   preview: ImportPreview | null | undefined;
+  saveResult: ImportSaveResult | null | undefined;
   setAccount: (account: Account) => void;
-  setMessage: (message: string) => void;
 }) {
   return (
     <div className="admin-import">
@@ -375,27 +478,7 @@ function ImportPrototype({ account, echo, message, preview, setAccount, setMessa
         </fieldset>
 
         <ShinyOutput id="upload_widget" className="shiny-html-output upload-holder" />
-        <PreviewPanel preview={preview} />
-      </section>
-
-      <section className="panel bridge-panel" aria-labelledby="bridge-title">
-        <div>
-          <p className="eyebrow">JSON exchange</p>
-          <h2 id="bridge-title">Client/server check</h2>
-          <p>This text crosses the ShinyReact bridge and returns as structured JSON.</p>
-        </div>
-        <label className="text-field">
-          <span>Message</span>
-          <input
-            onChange={(event: ChangeEvent<HTMLInputElement>) => setMessage(event.target.value)}
-            type="text"
-            value={message}
-          />
-        </label>
-        <div className="echo" aria-live="polite">
-          <span>R server</span>
-          <strong>{echo?.acknowledged ? echo.message : "Waiting for the server…"}</strong>
-        </div>
+        <PreviewPanel onConfirm={onConfirm} preview={preview} saveResult={saveResult} />
       </section>
     </div>
   );
@@ -428,8 +511,13 @@ export default function App() {
   const [, setConfigurationSaveRequest] = useShinyInput<ConfigurationSaveRequest | null>(
     "configuration_save_request", null, { priority: "event" },
   );
+  const [, setImportConfirmRequest] = useShinyInput<ImportConfirmRequest | null>(
+    "import_confirm_request", null, { priority: "event" },
+  );
+  const [, setConnectionRetryRequest] = useShinyInput<string | null>(
+    "connection_retry_request", null, { priority: "event" },
+  );
   const [account, setAccount] = useShinyInput<Account>("account_slot", "checking", { debounceMs: 0 });
-  const [message, setMessage] = useShinyInput("prototype_message", "Hello from React", { debounceMs: 0 });
   const overview = useShinyOutputValue<OverviewScreen | null>("overview_screen", null);
   const overviewError = useShinyOutputError("overview_screen");
   const overviewStatus = useShinyOutputStatus("overview_screen");
@@ -445,7 +533,8 @@ export default function App() {
   const configurationStatus = useShinyOutputStatus("configuration_screen");
   const configurationSaveResult = useShinyOutputValue<ConfigurationSaveResult | null>("configuration_save_result", null);
   const preview = useShinyOutputValue<ImportPreview | null>("import_preview", null);
-  const echo = useShinyOutputValue<EchoResponse | null>("prototype_echo", null);
+  const importSaveResult = useShinyOutputValue<ImportSaveResult | null>("import_save_result", null);
+  const connectionStatus = useShinyOutputValue<ConnectionStatus | null>("connection_status", null);
 
   React.useEffect(() => {
     setTransactionFilterInput(transactionFilters);
@@ -535,7 +624,14 @@ export default function App() {
       </header>
 
       <div id="main-content" tabIndex={-1}>
-        {view === "admin" ? (
+        {!connectionStatus ? (
+          <main><LoadingPanel label="Connecting to your finance data…" /></main>
+        ) : connectionStatus.status === "error" ? (
+          <ConnectionUnavailable
+            message={connectionStatus.message ?? "The finance database is unavailable."}
+            onRetry={() => setConnectionRetryRequest(`retry-${crypto.randomUUID()}`)}
+          />
+        ) : view === "admin" ? (
           configurationError ? <main><OutputError message={configurationError.message} /></main>
           : !configurationScreen ? <main><LoadingPanel label="Loading configuration…" /></main>
           : <div className={configurationStatus === "recalculating" ? "recalculating" : ""}>
@@ -543,7 +639,7 @@ export default function App() {
               screen={configurationScreen}
               saveResult={configurationSaveResult ?? null}
               onSave={setConfigurationSaveRequest}
-              importContent={<ImportPrototype account={account} echo={echo} message={message} preview={preview} setAccount={setAccount} setMessage={setMessage} />}
+              importContent={<ImportAdmin account={account} onConfirm={setImportConfirmRequest} preview={preview} saveResult={importSaveResult} setAccount={setAccount} />}
             />
           </div>
         ) : view === "transactions" || view === "review" ? (

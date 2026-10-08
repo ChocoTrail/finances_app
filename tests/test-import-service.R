@@ -437,6 +437,56 @@ run_test("confirmation verifies the account slot and filename", {
   })
 })
 
+run_test("a repeated confirmation request is idempotent", {
+  with_import_database({
+    file_path <- write_test_export(test_export(
+      dates = "10/01/2026",
+      descriptions = "TARGET STORE",
+      amounts = "-25.00"
+    ))
+    on.exit(unlink(file_path), add = TRUE)
+    preview <- preview_transaction_import(
+      connection,
+      file_path,
+      "credit_card_jacob"
+    )
+
+    first <- confirm_transaction_import(
+      connection,
+      preview,
+      "credit_card_jacob",
+      basename(file_path),
+      confirmation_id = "confirmation-request-001"
+    )
+    second <- confirm_transaction_import(
+      connection,
+      preview,
+      "credit_card_jacob",
+      basename(file_path),
+      confirmation_id = "confirmation-request-001"
+    )
+
+    expect_equal(first$status, "saved", "First request should save.")
+    expect_equal(second$status, "already_saved", "Repeated request should be safe.")
+    expect_equal(first$import_id, second$import_id, "Request should retain its import ID.")
+    expect_equal(table_count(connection, "imports"), 1, "Repeated request duplicated metadata.")
+    expect_equal(table_count(connection, "transactions"), 1, "Repeated request duplicated a transaction.")
+  })
+})
+
+run_test("confirmation requires an explicit account and date verification", {
+  expect_error(
+    normalize_import_confirmation_request(list(
+      request_id = "confirmation-request-002",
+      confirmed_account = "checking",
+      confirmed_filename = "Checking.csv",
+      account_and_dates_verified = FALSE
+    )),
+    "Confirm the account slot",
+    "Unchecked confirmation must be rejected."
+  )
+})
+
 run_test("a database failure rolls back the complete confirmed file", {
   with_import_database({
     file_path <- write_test_export(test_export(

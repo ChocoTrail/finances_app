@@ -6,19 +6,14 @@ Real account exports belong in `data/raw/`. CSV files in that directory are igno
 
 ## Current status
 
-The repository contains the validated local transaction pipeline, its
-protected April through September 2026 baseline, and the versioned local
-DuckDB schema, initial seed, and database-equivalence checks from implementation
-steps 1 through 3. The `choco_trail.finances_app` MotherDuck schema is
-initialized with the same validated history, completing step 4. The
-preview-first atomic import service is implemented for step 5. The Step 6
-ShinyReact prototype proves the supported file-upload path and a typed JSON
-exchange between the React client and R server. Step 7 adds the read-only
-Overview, month navigation, account freshness, category rollover cards, and a
-category-filtered transaction list. Step 8 adds transaction search and filters,
-the pending-review queue, responsive transaction cards, and audited one-off
-decision edits. Configuration and deployment described in
-[`docs/application-design.md`](docs/application-design.md) remain to be built.
+The application implements the complete workflow described in
+[`docs/application-design.md`](docs/application-design.md): protected baseline
+calculations, versioned DuckDB and MotherDuck storage, preview-first atomic
+imports, Overview and transaction maintenance, merchant defaults, audited
+budget configuration, and a responsive ShinyReact interface. Imports require
+an explicit account-and-date-range confirmation before any rows are saved.
+Database connection failures present a retry path without exposing secret or
+driver details.
 
 ## Current workflow
 
@@ -113,12 +108,14 @@ Run the import regression suite with:
 Rscript tests/test-import-service.R
 ```
 
-## ShinyReact prototype
+## ShinyReact application
 
-The prototype keeps client source in `src/`, builds committed assets to
+The application keeps client source in `src/`, builds committed assets to
 `www/ui.js` and `www/ui.css`, and uses a genuine Shiny file input hosted inside
 the React interface. Upload preview responses expose aggregate counts and
-validation problems, not transaction descriptions.
+validation problems, not transaction descriptions. The confirmation screen
+repeats the selected account, filename, date coverage, and posted-row count
+before the atomic save is enabled.
 
 Install the locked frontend dependencies and rebuild the client with:
 
@@ -128,7 +125,7 @@ npm run check
 npm run build
 ```
 
-Run the prototype contract and server behavior checks with:
+Run the client/server contract and server behavior checks with:
 
 ```sh
 Rscript tests/testthat.R
@@ -161,8 +158,37 @@ The three-dot action expands a transaction-specific editor for category,
 reimbursable status, budget exclusion, and an optional note. Each save confirms
 the decision and writes its before-and-after state to the audit log in the same
 database transaction. Repeated save requests are idempotent, and failures roll
-back the complete edit. Merchant-default management remains reserved for step
-9 rather than being mixed into one-off transaction correction.
+back the complete edit. Merchant-default management stays separate from
+one-off transaction correction so a prospective rule never silently rewrites
+saved history.
+
+## Administration
+
+Admin provides the import workflow, merchant-default management, and audited
+budget configuration. Budget versions have an effective month, monthly total,
+per-category allocations, budget start month, and category opening balances.
+Validation requires category allocations to equal the monthly total before an
+atomic save is allowed.
+
+## Deployment
+
+Posit Connect Cloud deploys the committed R application and built client
+assets from `manifest.json`; it does not need Node during deployment. Before
+regenerating the manifest, use an R version supported by Connect Cloud, restore
+the locked dependencies, rebuild the client, and run the complete test suite.
+Create the manifest with an explicit runtime file list so private data, tests,
+and local development files cannot be uploaded.
+
+Configure these environment variables in the deployed content settings:
+
+```text
+FINANCES_APP_DATABASE_TARGET=motherduck
+MOTHERDUCK_TOKEN=<deployment secret>
+```
+
+Never commit the token or a local `.Renviron`. After deployment, verify the
+connection status, Overview totals, account coverage dates, and a read-only
+import preview before performing any production mutation.
 
 Private transaction overrides belong in `data/private/`. Files in that
 directory are ignored by Git and will eventually be replaced by durable MotherDuck table(s).

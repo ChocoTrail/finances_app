@@ -45,15 +45,21 @@
 - Phone layouts avoid page-level horizontal scrolling; navigation and forms reflow rather than clip.
 - Reduced-motion preferences remove nonessential interface transitions.
 
-## Upload prototype
+## Production connection
 
-- The page identifies itself as a technical prototype for Family finances.
-- React owns the account-slot selector and sends its value to the R server.
-- The upload control is a genuine Shiny file input hosted inside React.
+- A database connection failure leaves the application shell available with a clear, nontechnical error.
+- The user can retry the MotherDuck connection in place without reloading the browser.
+- A successful retry restores the normal screens and never creates an offline cache or alternate source of truth.
+
+## Import workflow
+
+- React owns the account-slot selector, while the upload control remains a genuine Shiny file input hosted inside React.
 - Before a file is selected, the import-preview JSON reports `waiting`.
-- Selecting a valid export returns coverage and aggregate new/known counts.
-- Selecting a malformed export returns the complete blocking problem list.
-- Previewing a file never writes an import or transaction.
-- The preview reminds the user to verify the account slot and use complete-day exports.
-- Text entered in the bridge check returns from R as acknowledged JSON.
+- Selecting a valid export returns coverage and aggregate new/known counts without writing anything.
+- Selecting a malformed export returns every blocking problem and never offers confirmation.
+- Confirmation repeats the selected account, filename, coverage, and transaction count.
+- The user must explicitly verify the account slot and complete-day coverage before confirming.
+- A confirmed import atomically saves its metadata, new transactions and decisions, audit rows, and sightings.
+- Repeating the same confirmation request is idempotent, and a failed confirmation writes nothing.
+- A successful import refreshes Overview, Transactions, Review, and Admin and displays a concise confirmation.
 - Output recalculation keeps the previous preview visible with reduced emphasis.
