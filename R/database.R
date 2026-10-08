@@ -46,8 +46,199 @@ connect_finance_database <- function(
   )
 }
 
+connect_local_finance_database <- function(
+  config = finances_app_config,
+  read_only = FALSE
+) {
+  validate_finances_app_config(config)
+  connect_finance_database(
+    config$local_database_path,
+    read_only = read_only
+  )
+}
+
+connect_motherduck_finance_database <- function(
+  config = finances_app_config
+) {
+  validate_finances_app_config(config)
+  token <- motherduck_token()
+  prior_extension_token <- Sys.getenv(
+    "motherduck_token",
+    unset = NA_character_
+  )
+
+  on.exit({
+    if (is.na(prior_extension_token)) {
+      Sys.unsetenv("motherduck_token")
+    } else {
+      do.call(
+        Sys.setenv,
+        setNames(list(prior_extension_token), "motherduck_token")
+      )
+    }
+  }, add = TRUE)
+
+  do.call(Sys.setenv, setNames(list(token), "motherduck_token"))
+  connection <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:")
+
+  tryCatch(
+    {
+      DBI::dbExecute(connection, "INSTALL motherduck")
+      DBI::dbExecute(connection, "LOAD motherduck")
+
+      database_identifier <- DBI::dbQuoteIdentifier(
+        connection,
+        config$motherduck_database
+      )
+      attach_statement <- sprintf(
+        "ATTACH 'md:%s' AS %s",
+        config$motherduck_database,
+        database_identifier
+      )
+
+      DBI::dbExecute(connection, attach_statement)
+      DBI::dbExecute(connection, paste("USE", database_identifier))
+      connection
+    },
+    error = function(error) {
+      disconnect_finance_database(connection)
+      stop(
+        "Could not connect to MotherDuck: ",
+        conditionMessage(error),
+        call. = FALSE
+      )
+    }
+  )
+}
+
+connect_app_finance_database <- function(
+  config = finances_app_config,
+  target = finance_database_target(config),
+  read_only = FALSE
+) {
+  target <- validate_finance_database_target(target, config)
+
+  switch(
+    target,
+    local = connect_local_finance_database(config, read_only),
+    motherduck = connect_motherduck_finance_database(config)
+  )
+}
+
 disconnect_finance_database <- function(connection) {
-  DBI::dbDisconnect(connection, shutdown = TRUE)
+  if (!is.null(connection) && DBI::dbIsValid(connection)) {
+    DBI::dbDisconnect(connection, shutdown = TRUE)
+  }
+
+  invisible(NULL)
+}
+
+finance_schema_exists <- function(
+  connection,
+  config = finances_app_config
+) {
+  DBI::dbGetQuery(
+    connection,
+    paste(
+      "SELECT count(*) AS schema_count",
+      "FROM information_schema.schemata",
+      "WHERE catalog_name = ? AND schema_name = ?"
+    ),
+    params = list(config$motherduck_database, config$database_schema)
+  )$schema_count[[1]] > 0
+}
+
+create_and_select_finance_schema <- function(
+  connection,
+  config = finances_app_config
+) {
+  validate_finances_app_config(config)
+  schema_identifier <- DBI::dbQuoteIdentifier(
+    connection,
+    config$database_schema
+  )
+
+  DBI::dbExecute(
+    connection,
+    paste("CREATE SCHEMA IF NOT EXISTS", schema_identifier)
+  )
+  DBI::dbExecute(
+    connection,
+    paste("SET schema =", DBI::dbQuoteString(connection, config$database_schema))
+  )
+
+  invisible(connection)
+}
+
+select_finance_schema <- function(
+  connection,
+  config = finances_app_config
+) {
+  if (!finance_schema_exists(connection, config)) {
+    stop(
+      "MotherDuck schema does not exist: ",
+      config$motherduck_database,
+      ".",
+      config$database_schema,
+      call. = FALSE
+    )
+  }
+
+  DBI::dbExecute(
+    connection,
+    paste("SET schema =", DBI::dbQuoteString(connection, config$database_schema))
+  )
+
+  invisible(connection)
+}
+
+finance_database_contract <- function(
+  connection,
+  config = finances_app_config
+) {
+  objects <- DBI::dbGetQuery(
+    connection,
+    paste(
+      "SELECT table_name, table_type",
+      "FROM information_schema.tables",
+      "WHERE table_catalog = ? AND table_schema = ?",
+      "ORDER BY table_name"
+    ),
+    params = list(config$motherduck_database, config$database_schema)
+  )
+
+  expected_tables <- c(
+    "budget_allocations",
+    "budget_opening_balances",
+    "budget_versions",
+    "categories",
+    "decision_audit_log",
+    "imports",
+    "merchant_rules",
+    "schema_migrations",
+    "transaction_decisions",
+    "transactions"
+  )
+  present_tables <- objects$table_name
+  row_counts <- stats::setNames(
+    rep(NA_real_, length(expected_tables)),
+    expected_tables
+  )
+
+  for (table_name in intersect(expected_tables, present_tables)) {
+    quoted_table <- DBI::dbQuoteIdentifier(connection, table_name)
+    row_counts[[table_name]] <- DBI::dbGetQuery(
+      connection,
+      paste("SELECT count(*) AS row_count FROM", quoted_table)
+    )$row_count[[1]]
+  }
+
+  list(
+    objects = objects,
+    missing_tables = setdiff(expected_tables, present_tables),
+    unexpected_tables = setdiff(present_tables, expected_tables),
+    row_counts = row_counts
+  )
 }
 
 get_migration_files <- function(migrations_path = "migrations") {

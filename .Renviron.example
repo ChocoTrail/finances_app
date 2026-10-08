@@ -1,0 +1,5 @@
+# Server-side secret required for MotherDuck connections.
+MOTHERDUCK_TOKEN=
+
+# Non-secret deployment setting. Local development defaults to local.
+FINANCES_APP_DATABASE_TARGET=motherduck

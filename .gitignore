@@ -1,4 +1,5 @@
 .DS_Store
+.Renviron
 data/raw/*.csv
 data/raw/*.CSV
 data/private/*.csv
