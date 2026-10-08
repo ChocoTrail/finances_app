@@ -196,12 +196,13 @@ Rscript scripts/write_manifest.R
 ```
 
 The generator exports the locked `rv` environment to `renv.lock` as deployment
-metadata, then creates the manifest from that exact package set. `rv` remains
-the project environment manager; do not edit the generated `renv.lock` by
-hand. The explicit runtime file list prevents private data, tests, publishing
-tools, and local development files from being uploaded. Regenerate and commit
-both deployment artifacts whenever a runtime file, runtime asset, or package
-dependency changes.
+metadata, creates the manifest from that exact package set, and carries Git
+package source fields into the manifest so Connect Cloud can download pinned
+revisions. `rv` remains the project environment manager; do not edit either
+generated deployment artifact by hand. The explicit runtime file list prevents
+private data, tests, publishing tools, and local development files from being
+uploaded. Regenerate and commit both deployment artifacts whenever a runtime
+file, runtime asset, or package dependency changes.
 
 Configure these environment variables in the deployed content settings:
 

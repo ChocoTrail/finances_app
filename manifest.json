@@ -1988,7 +1988,20 @@
         "Roxygen": "list(markdown = TRUE)",
         "Author": "Barret Schloerke [cre, aut] (ORCID:\n    <https://orcid.org/0000-0001-9986-114X>),\n  Winston Chang [ctb] (ORCID: <https://orcid.org/0000-0002-1576-2126>),\n  Garrick Aden-Buie [ctb] (ORCID:\n    <https://orcid.org/0000-0002-7111-0077>),\n  Carson Sievert [ctb] (ORCID: <https://orcid.org/0000-0002-4958-2844>),\n  Posit Software, PBC [cph, fnd] (ROR: <https://ror.org/03wc8by49>),\n  Meta Platforms, Inc. [cph] ('React' and 'ReactDOM', bundled in\n    inst/lib/shiny/shinyreact.js)",
         "Maintainer": "Barret Schloerke <barret@posit.co>",
-        "Built": "R 4.6.1; ; 2026-10-08 14:31:59 UTC; unix"
+        "Built": "R 4.6.1; ; 2026-10-08 14:31:59 UTC; unix",
+        "RemoteType": "github",
+        "RemoteHost": "api.github.com",
+        "RemoteRepo": "shinyreact",
+        "RemoteUsername": "posit-dev",
+        "RemotePkgRef": "posit-dev/shinyreact",
+        "RemoteRef": "e8812353d5f076f6e98a27a7e210d0a3e177ea1d",
+        "RemoteSha": "e8812353d5f076f6e98a27a7e210d0a3e177ea1d",
+        "RemoteSubdir": "pkg-r",
+        "GithubRepo": "shinyreact",
+        "GithubUsername": "posit-dev",
+        "GithubRef": "e8812353d5f076f6e98a27a7e210d0a3e177ea1d",
+        "GithubSHA1": "e8812353d5f076f6e98a27a7e210d0a3e177ea1d",
+        "GithubSubdir": "pkg-r"
       }
     },
     "snowflakeauth": {

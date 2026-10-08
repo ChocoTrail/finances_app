@@ -73,3 +73,59 @@ rsconnect::writeManifest(
   appMode = "shiny",
   dependencyResolution = "strict"
 )
+
+lockfile <- jsonlite::read_json("renv.lock", simplifyVector = FALSE)
+manifest <- jsonlite::read_json("manifest.json", simplifyVector = FALSE)
+git_packages <- names(Filter(
+  function(package) identical(package$Source, "GitHub"),
+  lockfile$Packages
+))
+
+for (package_name in git_packages) {
+  locked_package <- lockfile$Packages[[package_name]]
+  manifest_package <- manifest$packages[[package_name]]
+
+  if (is.null(manifest_package)) {
+    stop(
+      "Cannot write manifest; missing Git package: ",
+      package_name,
+      call. = FALSE
+    )
+  }
+
+  remote_metadata <- list(
+    RemoteType = locked_package$RemoteType,
+    RemoteHost = locked_package$RemoteHost,
+    RemoteRepo = locked_package$RemoteRepo,
+    RemoteUsername = locked_package$RemoteUsername,
+    RemotePkgRef = paste0(
+      locked_package$RemoteUsername,
+      "/",
+      locked_package$RemoteRepo
+    ),
+    RemoteRef = locked_package$RemoteSha,
+    RemoteSha = locked_package$RemoteSha,
+    RemoteSubdir = locked_package$RemoteSubdir,
+    GithubRepo = locked_package$RemoteRepo,
+    GithubUsername = locked_package$RemoteUsername,
+    GithubRef = locked_package$RemoteSha,
+    GithubSHA1 = locked_package$RemoteSha,
+    GithubSubdir = locked_package$RemoteSubdir
+  )
+  remote_metadata <- remote_metadata[
+    !vapply(remote_metadata, is.null, logical(1))
+  ]
+
+  for (field_name in names(remote_metadata)) {
+    manifest$packages[[package_name]]$description[[field_name]] <-
+      remote_metadata[[field_name]]
+  }
+}
+
+jsonlite::write_json(
+  manifest,
+  "manifest.json",
+  auto_unbox = TRUE,
+  null = "null",
+  pretty = TRUE
+)
