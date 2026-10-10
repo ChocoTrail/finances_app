@@ -29,7 +29,30 @@ test_that("overview cards preserve independent rollover calculations", {
   expect_equal(personal$monthly_allocation, 1100)
   expect_equal(personal$net_spending, -10)
   expect_equal(personal$available_balance, 2185)
+  expect_equal(personal$pace_state, "success")
   expect_equal(personal$balance_state, "available")
+})
+
+test_that("budget pace compares current spending with elapsed month", {
+  selected_month <- as.Date("2026-05-01")
+  today <- as.Date("2026-05-15")
+
+  expect_equal(
+    classify_budget_pace(400, 1000, selected_month, today),
+    "success"
+  )
+  expect_equal(
+    classify_budget_pace(600, 1000, selected_month, today),
+    "warning"
+  )
+  expect_equal(
+    classify_budget_pace(1001, 1000, selected_month, today),
+    "danger"
+  )
+  expect_equal(
+    classify_budget_pace(1000, 1000, as.Date("2026-04-01"), today),
+    "success"
+  )
 })
 
 test_that("negative rollover is explicitly identified as a deficit", {

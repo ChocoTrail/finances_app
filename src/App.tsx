@@ -33,6 +33,7 @@ type CategoryCard = {
   net_spending: number;
   opening_rollover: number;
   available_balance: number;
+  pace_state: "success" | "warning" | "danger";
   balance_state: "available" | "deficit";
 };
 
@@ -150,8 +151,8 @@ function Metric({ label, value }: { label: string; value: string | number }) {
 
 function LoadingPanel({ label }: { label: string }) {
   return (
-    <div className="screen-state" role="status">
-      <span className="loading-mark" aria-hidden="true" />
+    <div aria-busy="true" className="screen-state" role="status">
+      <span className="brand-spinner" aria-hidden="true" />
       <p>{label}</p>
     </div>
   );
@@ -243,20 +244,36 @@ function CategoryCardView({ category, monthLabel, onSelect }: {
     ? (category.net_spending / category.monthly_allocation) * 100
     : 0;
   const progress = Math.max(0, Math.min(100, rawProgress));
-  const progressText = `${Math.max(0, rawProgress).toFixed(0)}%`;
+  const displayedProgress = Math.max(0, rawProgress);
+  const progressText = displayedProgress > 100 && displayedProgress < 101
+    ? `${displayedProgress.toFixed(1)}%`
+    : `${displayedProgress.toFixed(0)}%`;
   const spendingText = category.net_spending < 0
     ? `${currency.format(Math.abs(category.net_spending))} net credit`
     : `${currency.format(category.net_spending)} spent`;
+  const paceLabel = {
+    success: "On track",
+    warning: "Ahead of pace",
+    danger: "Over budget",
+  }[category.pace_state];
+  const cardClasses = [
+    "category-card",
+    `pace-${category.pace_state}`,
+    category.balance_state === "deficit" ? "deficit" : "",
+  ].filter(Boolean).join(" ");
 
   return (
     <button
       aria-label={`View ${category.name} transactions for ${monthLabel}`}
-      className={category.balance_state === "deficit" ? "category-card deficit" : "category-card"}
+      className={cardClasses}
       onClick={() => onSelect(category.category_code)}
       type="button"
     >
       <span className="card-title">{category.name}</span>
-      <span className="progress-label">Monthly progress</span>
+      <span className="progress-heading">
+        <span className="progress-label">Monthly progress</span>
+        <span className="pace-label">{paceLabel}</span>
+      </span>
       <span className="progress-summary">
         <strong>{progressText}</strong>
         <span>{spendingText}</span>
@@ -306,17 +323,8 @@ function OverviewView({ overview, onMonthChange, onSelectCategory }: {
         <div>
           <p className="eyebrow">Overview</p>
           <h1 id="overview-title">Your monthly budget</h1>
-          <p className="lede">See what you planned for this month and how spending is tracking.</p>
         </div>
         <MonthNavigation overview={overview} onChange={onMonthChange} />
-      </section>
-
-      <section className="budget-summary" aria-labelledby="budget-total-title">
-        <div>
-          <p className="eyebrow">Total monthly budget</p>
-          <h2 id="budget-total-title">{currency.format(totalMonthlyBudget)}</h2>
-        </div>
-        <p>{overview.month_label} · allocated across {overview.categories.length} categories</p>
       </section>
 
       <AccountFreshnessList accounts={overview.accounts} />
@@ -339,6 +347,13 @@ function OverviewView({ overview, onMonthChange, onSelectCategory }: {
             />
           ))}
         </div>
+        <section className="budget-summary" aria-labelledby="budget-total-title">
+          <div>
+            <p className="eyebrow">Total monthly budget</p>
+            <h2 id="budget-total-title">{currency.format(totalMonthlyBudget)}</h2>
+          </div>
+          <p>{overview.month_label}</p>
+        </section>
       </section>
     </main>
   );
@@ -394,7 +409,7 @@ function PreviewPanel({ preview, onConfirm, saveResult }: {
   };
 
   return (
-    <div className={status === "recalculating" ? "preview recalculating" : "preview"}>
+    <div aria-busy={status === "recalculating"} className={status === "recalculating" ? "preview recalculating" : "preview"}>
       <div className="preview-heading">
         <div>
           <p className="eyebrow">Import preview</p>
@@ -624,7 +639,7 @@ export default function App() {
           event.preventDefault();
           setView("overview");
         }}>
-          Family finances
+          Kendra&apos;s Fun Game
         </a>
         <nav aria-label="Primary navigation">
           <button
@@ -674,7 +689,7 @@ export default function App() {
         ) : view === "admin" ? (
           configurationError ? <main><OutputError message={configurationError.message} /></main>
           : !configurationScreen ? <main><LoadingPanel label="Loading configuration…" /></main>
-          : <div className={configurationStatus === "recalculating" ? "recalculating" : ""}>
+          : <div aria-busy={configurationStatus === "recalculating"} className={configurationStatus === "recalculating" ? "recalculating" : ""}>
             <AdminView
               screen={configurationScreen}
               saveResult={configurationSaveResult ?? null}
@@ -688,7 +703,7 @@ export default function App() {
           ) : !transactionScreen ? (
             <main><LoadingPanel label="Loading transactions…" /></main>
           ) : (
-            <div className={transactionStatus === "recalculating" ? "recalculating" : ""}>
+            <div aria-busy={transactionStatus === "recalculating"} className={transactionStatus === "recalculating" ? "recalculating" : ""}>
               <TransactionsView
                 filters={transactionFilters}
                 isReviewQueue={view === "review"}
@@ -706,7 +721,7 @@ export default function App() {
         ) : !overview ? (
           <main><LoadingPanel label="Loading your budget…" /></main>
         ) : (
-          <div className={overviewStatus === "recalculating" ? "recalculating" : ""}>
+          <div aria-busy={overviewStatus === "recalculating"} className={overviewStatus === "recalculating" ? "recalculating" : ""}>
             <OverviewView
               overview={overview}
               onMonthChange={changeMonth}
@@ -716,10 +731,6 @@ export default function App() {
         )}
       </div>
 
-      <footer>
-        <span>A Choco Trail project</span>
-        <img alt="Choco Trail" src="brand/logo/svg/choco-trail-lockup-horizontal-ink-outlined.svg" />
-      </footer>
     </div>
   );
 }

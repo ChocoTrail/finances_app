@@ -10,7 +10,7 @@ source(file.path("R", "transaction_service.R"))
 source(file.path("R", "configuration_service.R"))
 source(file.path("R", "app_server.R"))
 
-ui <- shinyreact::page_react(title = "Family finances")
+ui <- shinyreact::page_react(title = "Kendra's Fun Game")
 server <- create_finance_app_server()
 
 shiny::shinyApp(ui, server)

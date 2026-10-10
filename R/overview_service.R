@@ -69,7 +69,46 @@ format_account_freshness_contract <- function(freshness) {
   )
 }
 
-format_category_card_contracts <- function(category_rows) {
+month_elapsed_fraction <- function(selected_month, today = Sys.Date()) {
+  selected_month <- lubridate::floor_date(as.Date(selected_month), "month")
+  today <- as.Date(today)
+  current_month <- lubridate::floor_date(today, "month")
+
+  if (selected_month < current_month) {
+    return(1)
+  }
+
+  min(1, lubridate::day(today) / lubridate::days_in_month(today))
+}
+
+classify_budget_pace <- function(
+  net_spending,
+  monthly_allocation,
+  selected_month,
+  today = Sys.Date()
+) {
+  if (monthly_allocation <= 0) {
+    return(if (net_spending > 0) "danger" else "success")
+  }
+
+  spending_fraction <- max(net_spending, 0) / monthly_allocation
+
+  if (spending_fraction > 1) {
+    "danger"
+  } else if (
+    spending_fraction <= month_elapsed_fraction(selected_month, today)
+  ) {
+    "success"
+  } else {
+    "warning"
+  }
+}
+
+format_category_card_contracts <- function(
+  category_rows,
+  selected_month,
+  today = Sys.Date()
+) {
   purrr::pmap(
     category_rows,
     function(
@@ -88,6 +127,12 @@ format_category_card_contracts <- function(category_rows) {
         net_spending = net_spending,
         opening_rollover = opening_balance,
         available_balance = cumulative_rollover_balance,
+        pace_state = classify_budget_pace(
+          net_spending,
+          monthly_allocation,
+          selected_month,
+          today
+        ),
         balance_state = if (
           cumulative_rollover_balance < 0
         ) "deficit" else "available"
@@ -248,7 +293,11 @@ build_overview_screen_contract <- function(
     budget_start_month = as.character(budget_start_month),
     previous_month = format_optional_date(previous_month),
     next_month = format_optional_date(next_month),
-    categories = format_category_card_contracts(category_rows),
+    categories = format_category_card_contracts(
+      category_rows,
+      selected_month,
+      today
+    ),
     accounts = format_account_freshness_contract(
       read_account_freshness(connection)
     ),

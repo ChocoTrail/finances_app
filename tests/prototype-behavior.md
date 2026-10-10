@@ -6,6 +6,8 @@
 - The selected month defaults to the current calendar month.
 - Month navigation stops at the configured budget start and current month.
 - Exactly five category cards show available rollover, monthly spending, and allocation.
+- Current-month card states compare spending with the month's elapsed fraction: on track at or below pace, warning above pace through 100%, and danger above 100%.
+- Completed months are on track through 100% and danger above 100%.
 - A negative available balance is labeled as a deficit, not identified by color alone.
 - Account freshness reports the latest successful coverage date for every supported account.
 - Selecting a category opens a read-only transaction list filtered to that category and month.
@@ -27,13 +29,16 @@
 
 ## Configuration administration
 
-- Admin keeps upload preview, merchant defaults, monthly budgets, and budget setup in one place.
+- Admin keeps upload preview, merchant defaults, monthly budgets, and rollover settings in one place.
+- Merchant defaults use an alphabetical searchable list with simple Food & Living, Personal, Transportation, and Housing choices; recently seen merchants appear in a separate panel.
+- Merchant default changes apply to future imports only. Rainy Day is assigned to individual transactions.
 - Merchant defaults are searchable and expandable and can be created, edited, or deactivated, but never deleted.
 - Merchant changes affect future imports unless the user deliberately chooses to apply an active rule to matching existing transactions.
 - Every merchant save is server-validated, atomic, audited, and idempotent.
 - Monthly budget changes create immutable versions effective in the current or a future month; earlier months are never rewritten.
 - Every monthly budget version contains all five fixed categories and allocations sum exactly to its total.
-- Budget start month and all five opening balances are configured together and saved atomically with an audit trail.
+- The Rollover section explains that its configurable start month controls the earliest Overview month.
+- Rollover start-month changes are saved atomically with an audit trail and do not rewrite transactions or monthly budget versions.
 - Configuration saves refresh affected Overview, Transactions, and Admin data without reloading the application.
 
 ## Visual and interaction system

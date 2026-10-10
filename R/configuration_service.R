@@ -77,6 +77,53 @@ format_configuration_categories <- function(categories) {
   })
 }
 
+merchant_default_category_codes <- c(
+  "food_living",
+  "personal_discretionary",
+  "transportation",
+  "housing"
+)
+
+find_merchant_defaults <- function(connection, merchants) {
+  descriptions <- DBI::dbGetQuery(
+    connection,
+    paste(
+      "SELECT t.standardized_description AS display_name,",
+      "min(t.transaction_date) AS first_seen_date",
+      "FROM transactions t",
+      "JOIN transaction_decisions d USING (transaction_id)",
+      "WHERE d.budget_treatment IN ('expense', 'refund')",
+      "GROUP BY t.standardized_description"
+    )
+  ) |>
+    dplyr::mutate(first_seen_date = as.Date(first_seen_date))
+
+  if (!nrow(descriptions)) {
+    return(dplyr::mutate(descriptions, category_code = character()))
+  }
+
+  active_merchants <- merchants |>
+    dplyr::filter(is_active) |>
+    dplyr::arrange(priority)
+  category_code <- purrr::map_chr(descriptions$display_name, function(description) {
+    matches <- purrr::map_lgl(active_merchants$description_pattern, function(pattern) {
+      stringr::str_detect(description, stringr::regex(pattern, ignore_case = TRUE))
+    })
+    if (any(matches)) active_merchants$category_code[[which(matches)[[1]]]] else NA_character_
+  })
+
+  descriptions |>
+    dplyr::mutate(category_code = category_code) |>
+    dplyr::arrange(stringr::str_to_lower(display_name))
+}
+
+find_new_merchants <- function(merchant_defaults, today) {
+  current_month <- lubridate::floor_date(as.Date(today), "month")
+  since_last_month <- seq.Date(current_month, by = "-1 month", length.out = 2)[[2]]
+
+  dplyr::filter(merchant_defaults, first_seen_date >= since_last_month)
+}
+
 build_configuration_screen_contract <- function(connection, today = Sys.Date()) {
   categories <- configuration_categories(connection)
   merchants <- DBI::dbGetQuery(
@@ -84,11 +131,13 @@ build_configuration_screen_contract <- function(connection, today = Sys.Date()) 
     paste(
       "SELECT rule_id, display_name, description_pattern,",
       "default_category_code AS category_code, effective_date, priority, is_active",
-      "FROM merchant_rules ORDER BY priority"
+      "FROM merchant_rules ORDER BY lower(display_name), priority"
     )
   )
   versions <- read_database_budget_versions(connection)
   openings <- read_database_opening_balances(connection)
+  merchant_defaults <- find_merchant_defaults(connection, merchants)
+  new_merchants <- find_new_merchants(merchant_defaults, today)
   current_month <- lubridate::floor_date(as.Date(today), "month")
   default_effective_month <- seq.Date(current_month, by = "month", length.out = 2)[[2]]
 
@@ -125,15 +174,113 @@ build_configuration_screen_contract <- function(connection, today = Sys.Date()) 
         is_active = is_active
       )
     }),
+    merchant_defaults = purrr::pmap(merchant_defaults, function(display_name, first_seen_date, category_code) {
+      list(
+        display_name = display_name,
+        first_seen_date = as.character(first_seen_date),
+        category_code = if (is.na(category_code)) NULL else category_code
+      )
+    }),
+    new_merchants = purrr::pmap(new_merchants, function(display_name, first_seen_date, category_code) {
+      list(
+        display_name = display_name,
+        first_seen_date = as.character(first_seen_date),
+        category_code = if (is.na(category_code)) NULL else category_code
+      )
+    }),
     budget_versions = version_contracts,
     budget_setup = list(
-      budget_start_month = if (nrow(openings)) as.character(openings$budget_start_month[[1]]) else NULL,
-      opening_balances = purrr::pmap(
-        openings |> dplyr::select(category_code, budget_category, configured_opening_balance),
-        ~ list(category_code = ..1, category = ..2, amount = ..3)
-      )
+      budget_start_month = if (nrow(openings)) {
+        as.character(openings$budget_start_month[[1]])
+      } else {
+        NULL
+      }
     )
   )
+}
+
+exact_merchant_pattern <- function(description) {
+  escaped <- gsub("([][{}()+*^$|\\\\?.])", "\\\\\\1", description)
+  paste0("^", escaped, "$")
+}
+
+save_merchant_default_configuration <- function(connection, request, changed_at = Sys.time(), today = Sys.Date()) {
+  request_id <- configuration_request_id(request)
+  category_code <- as.character(configuration_field(request, "category_code"))
+  if (length(category_code) != 1 || is.na(category_code) ||
+      !category_code %in% merchant_default_category_codes) {
+    stop("Merchant defaults must use Food & living, Personal, Transportation, or Housing.", call. = FALSE)
+  }
+
+  rule_id <- if ("rule_id" %in% names(request) && !is.null(request$rule_id)) {
+    as.character(request$rule_id)
+  } else {
+    NULL
+  }
+  description <- if ("merchant_description" %in% names(request) && !is.null(request$merchant_description)) {
+    trimws(as.character(request$merchant_description))
+  } else {
+    NULL
+  }
+  priority_override <- NULL
+
+  if (!is.null(rule_id) && length(rule_id) == 1 && !is.na(rule_id) && nzchar(rule_id)) {
+    existing <- DBI::dbGetQuery(
+      connection,
+      "SELECT * FROM merchant_rules WHERE rule_id = ?",
+      params = list(rule_id)
+    )
+    if (nrow(existing) != 1) stop("Merchant was not found.", call. = FALSE)
+    merchant_request <- list(
+      request_id = request_id,
+      rule_id = rule_id,
+      display_name = existing$display_name[[1]],
+      description_pattern = existing$description_pattern[[1]],
+      category_code = category_code,
+      effective_date = as.character(existing$effective_date[[1]]),
+      is_active = TRUE,
+      apply_existing = FALSE
+    )
+  } else {
+    if (is.null(description) || length(description) != 1 || is.na(description) ||
+        !nzchar(description) || nchar(description) > 100) {
+      stop("Merchant name must contain 1 to 100 characters.", call. = FALSE)
+    }
+    pattern <- exact_merchant_pattern(description)
+    existing <- DBI::dbGetQuery(
+      connection,
+      "SELECT * FROM merchant_rules WHERE description_pattern = ? ORDER BY priority LIMIT 1",
+      params = list(pattern)
+    )
+    first_seen <- DBI::dbGetQuery(
+      connection,
+      "SELECT min(transaction_date) AS first_seen_date FROM transactions WHERE standardized_description = ?",
+      params = list(description)
+    )$first_seen_date[[1]]
+    if (nrow(existing)) {
+      rule_id <- existing$rule_id[[1]]
+      effective_date <- as.character(existing$effective_date[[1]])
+    } else {
+      rule_id <- NULL
+      effective_date <- if (is.na(first_seen)) as.character(as.Date(today)) else as.character(as.Date(first_seen))
+      priority_override <- DBI::dbGetQuery(
+        connection,
+        "SELECT coalesce(min(priority), 10) - 10 AS priority FROM merchant_rules"
+      )$priority[[1]]
+    }
+    merchant_request <- list(
+      request_id = request_id,
+      rule_id = rule_id,
+      display_name = description,
+      description_pattern = pattern,
+      category_code = category_code,
+      effective_date = effective_date,
+      is_active = TRUE,
+      apply_existing = FALSE
+    )
+  }
+
+  save_merchant_configuration(connection, merchant_request, changed_at, priority_override)
 }
 
 normalize_merchant_request <- function(request) {
@@ -175,7 +322,7 @@ normalize_merchant_request <- function(request) {
   )
 }
 
-save_merchant_configuration <- function(connection, request, changed_at = Sys.time()) {
+save_merchant_configuration <- function(connection, request, changed_at = Sys.time(), priority_override = NULL) {
   request <- normalize_merchant_request(request)
   prior_audit <- configuration_audit_exists(connection, "merchant_rule_save", request$request_id)
   if (nrow(prior_audit)) {
@@ -192,7 +339,11 @@ save_merchant_configuration <- function(connection, request, changed_at = Sys.ti
   if (creating) {
     rule_id <- make_stable_id("merchant", paste(request$request_id, request$display_name, sep = "|"))
     before <- NULL
-    priority <- DBI::dbGetQuery(connection, "SELECT coalesce(max(priority), 0) + 10 AS priority FROM merchant_rules")$priority[[1]]
+    priority <- if (is.null(priority_override)) {
+      DBI::dbGetQuery(connection, "SELECT coalesce(max(priority), 0) + 10 AS priority FROM merchant_rules")$priority[[1]]
+    } else {
+      as.integer(priority_override)
+    }
   } else {
     rule_id <- request$rule_id
     before <- DBI::dbGetQuery(connection, "SELECT * FROM merchant_rules WHERE rule_id = ?", params = list(rule_id))
@@ -362,13 +513,108 @@ save_opening_balance_configuration <- function(connection, request, changed_at =
   list(status = "saved", request_id = request_id)
 }
 
+save_rollover_start_configuration <- function(
+  connection,
+  request,
+  changed_at = Sys.time(),
+  today = Sys.Date()
+) {
+  request_id <- configuration_request_id(request)
+  prior_audit <- configuration_audit_exists(
+    connection,
+    "rollover_start_save",
+    request_id
+  )
+
+  if (nrow(prior_audit)) {
+    return(list(status = "already_saved", request_id = request_id))
+  }
+
+  start_month <- configuration_month(
+    configuration_field(request, "budget_start_month"),
+    "Rollover start month"
+  )
+  current_month <- lubridate::floor_date(as.Date(today), "month")
+
+  if (start_month > current_month) {
+    stop("Rollover start month cannot be in the future.", call. = FALSE)
+  }
+
+  effective <- DBI::dbGetQuery(
+    connection,
+    paste(
+      "SELECT count(*) AS n FROM budget_versions",
+      "WHERE effective_month <= ?"
+    ),
+    params = list(start_month)
+  )$n[[1]] > 0
+
+  if (!effective) {
+    stop(
+      "Rollover start month must have an effective budget version.",
+      call. = FALSE
+    )
+  }
+
+  before <- read_database_opening_balances(connection)
+
+  if (nrow(before) == 0) {
+    stop("Rollover settings have not been initialized.", call. = FALSE)
+  }
+
+  before_months <- unique(before$budget_start_month)
+
+  if (length(before_months) != 1) {
+    stop("Every category must use the same rollover start month.", call. = FALSE)
+  }
+
+  DBI::dbWithTransaction(connection, {
+    DBI::dbExecute(
+      connection,
+      paste(
+        "UPDATE budget_opening_balances",
+        "SET budget_start_month = ?, updated_at = ?"
+      ),
+      params = list(
+        start_month,
+        as.POSIXct(changed_at, tz = "UTC")
+      )
+    )
+    DBI::dbAppendTable(
+      connection,
+      "decision_audit_log",
+      tibble::tibble(
+        audit_id = make_stable_id(
+          "audit",
+          paste("rollover_start_save", request_id, sep = "|")
+        ),
+        entity_type = "opening_balance",
+        entity_id = "all_categories",
+        action = "rollover_start_save",
+        changed_at = as.POSIXct(changed_at, tz = "UTC"),
+        before_json = configuration_json(list(
+          budget_start_month = as.character(before_months[[1]])
+        )),
+        after_json = configuration_json(list(
+          budget_start_month = as.character(start_month)
+        )),
+        change_note = "Updated rollover start month"
+      )
+    )
+  })
+
+  list(status = "saved", request_id = request_id)
+}
+
 save_configuration_change <- function(connection, request, changed_at = Sys.time(), today = Sys.Date()) {
   kind <- as.character(configuration_field(request, "kind"))
   if (length(kind) != 1 || is.na(kind)) stop("Configuration change kind is invalid.", call. = FALSE)
   switch(kind,
     merchant = save_merchant_configuration(connection, request, changed_at),
+    merchant_default = save_merchant_default_configuration(connection, request, changed_at, today),
     budget_version = save_budget_version_configuration(connection, request, changed_at, today),
     opening_balances = save_opening_balance_configuration(connection, request, changed_at, today),
+    rollover_start = save_rollover_start_configuration(connection, request, changed_at, today),
     stop("Unsupported configuration change kind.", call. = FALSE)
   )
 }

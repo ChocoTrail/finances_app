@@ -4,14 +4,10 @@ const { React } = window.shinyreact;
 
 type CategoryOption = { value: string; label: string; sort_order: number };
 type Merchant = {
-  rule_id: string;
   display_name: string;
-  description_pattern: string;
   category_code: string;
-  effective_date: string;
-  priority: number;
-  is_active: boolean;
 };
+type MerchantDefault = { display_name: string; first_seen_date: string; category_code: string | null };
 type Allocation = { category_code: string; category: string; amount: number };
 type BudgetVersion = {
   budget_version_id: string;
@@ -26,8 +22,10 @@ export type ConfigurationScreen = {
   default_effective_month: string;
   categories: CategoryOption[];
   merchants: Merchant[];
+  merchant_defaults: MerchantDefault[];
+  new_merchants: MerchantDefault[];
   budget_versions: BudgetVersion[];
-  budget_setup: { budget_start_month: string | null; opening_balances: Allocation[] };
+  budget_setup: { budget_start_month: string | null };
 };
 
 export type ConfigurationSaveResult = {
@@ -38,7 +36,7 @@ export type ConfigurationSaveResult = {
 };
 
 export type ConfigurationSaveRequest = Record<string, unknown>;
-type Section = "import" | "merchants" | "budget" | "setup";
+type Section = "import" | "merchants" | "budget" | "rollover";
 
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
 const monthLabel = new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
@@ -64,63 +62,74 @@ function MerchantAdmin({ screen, onSave, result }: {
   result: ConfigurationSaveResult | null;
 }) {
   const [search, setSearch] = React.useState("");
-  const [selected, setSelected] = React.useState<Merchant | null>(null);
+  const [pendingKey, setPendingKey] = React.useState<string | null>(null);
   const [submittedRequestId, setSubmittedRequestId] = React.useState<string | null>(null);
-  const [form, setForm] = React.useState({
-    display_name: "", description_pattern: "", category_code: screen.categories[0]?.value ?? "",
-    effective_date: new Date().toISOString().slice(0, 10), is_active: true, apply_existing: false,
-  });
-  const filtered = screen.merchants.filter((merchant) =>
-    `${merchant.display_name} ${merchant.description_pattern}`.toLowerCase().includes(search.toLowerCase()),
-  );
-  const startNew = () => {
-    setSelected(null);
-    setSubmittedRequestId(null);
-    setForm({ display_name: "", description_pattern: "", category_code: screen.categories[0]?.value ?? "",
-      effective_date: new Date().toISOString().slice(0, 10), is_active: true, apply_existing: false });
+  const [choices, setChoices] = React.useState<Record<string, string>>({});
+  const categoryOrder = ["food_living", "personal_discretionary", "transportation", "housing"];
+  const categoryChoices = categoryOrder
+    .map((value) => screen.categories.find((category) => category.value === value))
+    .filter((category): category is CategoryOption => Boolean(category));
+  const shortCategoryLabels: Record<string, string> = {
+    food_living: "Food & Living",
+    personal_discretionary: "Personal",
+    transportation: "Transportation",
+    housing: "Housing",
   };
-  const edit = (merchant: Merchant) => {
-    setSelected(merchant);
-    setSubmittedRequestId(null);
-    setForm({ display_name: merchant.display_name, description_pattern: merchant.description_pattern,
-      category_code: merchant.category_code, effective_date: merchant.effective_date,
-      is_active: merchant.is_active, apply_existing: false });
-  };
-  const submit = (event: FormEvent) => {
-    event.preventDefault();
-    const nextRequestId = requestId("merchant");
-    setSubmittedRequestId(nextRequestId);
-    onSave({ kind: "merchant", request_id: nextRequestId, rule_id: selected?.rule_id ?? null, ...form });
-  };
+  const filtered = [...screen.merchant_defaults]
+    .sort((a, b) => a.display_name.localeCompare(b.display_name))
+    .filter((merchant) => merchant.display_name.toLowerCase().includes(search.trim().toLowerCase()));
   const matchingResult = result?.request_id === submittedRequestId ? result : null;
-  const isSaving = Boolean(submittedRequestId) && !matchingResult;
 
-  return <section className="admin-grid" aria-labelledby="merchant-admin-title">
-    <div className="panel admin-list-panel">
-      <div className="section-heading"><div><p className="eyebrow">Matching rules</p><h2 id="merchant-admin-title">Merchant defaults</h2></div>
-        <button className="secondary-button" onClick={startNew} type="button">New merchant</button></div>
-      <label className="text-field"><span>Search merchants</span><input value={search} onChange={(event) => setSearch(event.target.value)} type="search" /></label>
-      <div className="merchant-list">
-        {filtered.map((merchant) => <button className={selected?.rule_id === merchant.rule_id ? "merchant-item selected" : "merchant-item"}
-          key={merchant.rule_id} onClick={() => edit(merchant)} type="button">
-          <span><strong>{merchant.display_name}</strong><small>{screen.categories.find((item) => item.value === merchant.category_code)?.label}</small></span>
-          <span className={merchant.is_active ? "status status-ready" : "status"}>{merchant.is_active ? "Active" : "Inactive"}</span>
-        </button>)}
-      </div>
+  React.useEffect(() => {
+    if (matchingResult) setPendingKey(null);
+  }, [matchingResult]);
+
+  const saveChoice = (key: string, categoryCode: string, details: Record<string, unknown>) => {
+    const nextRequestId = requestId("merchant");
+    setChoices((current) => ({ ...current, [key]: categoryCode }));
+    setPendingKey(key);
+    setSubmittedRequestId(nextRequestId);
+    onSave({ kind: "merchant_default", request_id: nextRequestId, category_code: categoryCode, ...details });
+  };
+
+  const radioRow = (key: string, name: string, currentCategory: string | null, details: Record<string, unknown>, note?: string) => {
+    const selectedCategory = choices[key] ?? currentCategory;
+    return <div className="merchant-default-row" key={key}>
+      <div className="merchant-default-name"><strong>{name}</strong>{note && <small>{note}</small>}</div>
+      <fieldset aria-label={`Default category for ${name}`} disabled={pendingKey === key}>
+        {categoryChoices.map((category) => <label key={category.value}>
+          <input checked={selectedCategory === category.value} name={`merchant-${key}`} onChange={() => saveChoice(key, category.value, details)} type="radio" />
+          <span>{shortCategoryLabels[category.value] ?? category.label}</span>
+        </label>)}
+      </fieldset>
+      {pendingKey === key && <span className="inline-saving" role="status">Saving…</span>}
+    </div>;
+  };
+
+  return <section className="merchant-defaults" aria-labelledby="merchant-admin-title">
+    <div className="panel merchant-new-panel">
+      <div><p className="eyebrow">Recently seen</p><h2>New since last month</h2><p>These merchants first appeared since the start of last month.</p></div>
+      {screen.new_merchants.length
+        ? <div className="merchant-default-list">{screen.new_merchants.map((merchant) => radioRow(
+          `new-${merchant.display_name}`, merchant.display_name, merchant.category_code,
+          { merchant_description: merchant.display_name },
+          `${merchant.category_code === "rainy_day" ? "Assign Rainy Day individually · " : !merchant.category_code ? "Choose a default · " : ""}First seen ${formatMonth(`${merchant.first_seen_date.slice(0, 7)}-01`)}`,
+        ))}</div>
+        : <p className="empty-list-message">No new merchants need a default.</p>}
     </div>
-    <form className="panel admin-form" onSubmit={submit}>
-      <div><p className="eyebrow">{selected ? "Edit default" : "Create default"}</p><h2>{selected?.display_name ?? "New merchant"}</h2></div>
-      <label className="text-field"><span>Display name</span><input required maxLength={100} value={form.display_name} onChange={(e) => setForm({ ...form, display_name: e.target.value })} /></label>
-      <label className="text-field"><span>Description regular expression</span><input required value={form.description_pattern} onChange={(e) => setForm({ ...form, description_pattern: e.target.value })} /></label>
-      <label className="text-field"><span>Default category</span><select value={form.category_code} onChange={(e) => setForm({ ...form, category_code: e.target.value })}>
-        {screen.categories.map((category) => <option value={category.value} key={category.value}>{category.label}</option>)}</select></label>
-      <label className="text-field"><span>Effective date</span><input type="date" required value={form.effective_date} onChange={(e) => setForm({ ...form, effective_date: e.target.value })} /></label>
-      <label className="check-field"><input type="checkbox" checked={form.is_active} onChange={(e) => setForm({ ...form, is_active: e.target.checked, apply_existing: e.target.checked ? form.apply_existing : false })} /><span>Active for future imports</span></label>
-      <label className={form.apply_existing ? "check-field deliberate selected" : "check-field deliberate"}><input type="checkbox" disabled={!form.is_active} checked={form.apply_existing} onChange={(e) => setForm({ ...form, apply_existing: e.target.checked })} /><span>Also apply this rule to matching existing transactions</span></label>
-      <p className="field-help">Existing transactions stay unchanged unless you deliberately select the option above. Rules can be deactivated, not deleted.</p>
+    <div className="panel admin-list-panel">
+      <div><p className="eyebrow">Future imports</p><h2 id="merchant-admin-title">All merchant defaults</h2><p>Choose what each merchant should use going forward. Past transactions will not change.</p></div>
+      <label className="text-field"><span>Search merchants</span><input value={search} onChange={(event) => setSearch(event.target.value)} type="search" /></label>
+      <div className="merchant-default-list">
+        {filtered.map((merchant) => radioRow(
+          `all-${merchant.display_name}`, merchant.display_name, merchant.category_code,
+          { merchant_description: merchant.display_name },
+          merchant.category_code === "rainy_day" ? "Assign Rainy Day to individual transactions" : !merchant.category_code ? "Choose a default" : undefined,
+        ))}
+        {!filtered.length && <p className="empty-list-message">No merchants match that search.</p>}
+      </div>
       <SaveNotice result={matchingResult} />
-      <button className="primary-button" disabled={isSaving} type="submit">{isSaving ? "Saving…" : "Save merchant default"}</button>
-    </form>
+    </div>
   </section>;
 }
 
@@ -160,30 +169,30 @@ function BudgetAdmin({ screen, onSave, result }: {
   </div>;
 }
 
-function SetupAdmin({ screen, onSave, result }: {
+function RolloverAdmin({ screen, onSave, result }: {
   screen: ConfigurationScreen; onSave: (request: ConfigurationSaveRequest) => void; result: ConfigurationSaveResult | null;
 }) {
+  const earliestBudgetMonth = screen.budget_versions
+    .map((version) => version.effective_month)
+    .sort()[0]
+    ?.slice(0, 7);
   const [startMonth, setStartMonth] = React.useState((screen.budget_setup.budget_start_month ?? screen.current_month).slice(0, 7));
-  const [amounts, setAmounts] = React.useState<Record<string, number>>(Object.fromEntries(screen.categories.map((category) => [category.value,
-    screen.budget_setup.opening_balances.find((item) => item.category_code === category.value)?.amount ?? 0])));
   const [submittedRequestId, setSubmittedRequestId] = React.useState<string | null>(null);
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    const nextRequestId = requestId("opening");
+    const nextRequestId = requestId("rollover");
     setSubmittedRequestId(nextRequestId);
-    onSave({ kind: "opening_balances", request_id: nextRequestId, budget_start_month: `${startMonth}-01`,
-      opening_balances: screen.categories.map((category) => ({ category_code: category.value, amount: Number(amounts[category.value]) })) });
+    onSave({ kind: "rollover_start", request_id: nextRequestId, budget_start_month: `${startMonth}-01` });
   };
   const matchingResult = result?.request_id === submittedRequestId ? result : null;
   const isSaving = Boolean(submittedRequestId) && !matchingResult;
   return <form className="panel admin-form setup-form" onSubmit={submit}>
-    <div><p className="eyebrow">Rollover foundation</p><h2>Budget start and opening balances</h2><p>These five balances establish the amount carried into the first configured budget month.</p></div>
-    <label className="text-field"><span>Budget start month</span><input max={screen.current_month.slice(0, 7)} required type="month" value={startMonth} onChange={(e) => setStartMonth(e.target.value)} /></label>
-    <div className="allocation-fields">{screen.categories.map((category) => <label className="text-field" key={category.value}><span>{category.label}</span>
-      <input step="0.01" type="number" value={amounts[category.value]} onChange={(e) => setAmounts({ ...amounts, [category.value]: Number(e.target.value) })} /></label>)}</div>
-    <p className="field-help">Opening balances may be negative. The selected month must already have an effective budget version.</p>
+    <div><p className="eyebrow">Rollover settings</p><h2>Choose when rollover begins</h2><p>The start month is the earliest month shown in Overview. Every later month carries its remaining balance forward from this point.</p></div>
+    <label className="text-field"><span>Rollover start month</span><input max={screen.current_month.slice(0, 7)} min={earliestBudgetMonth} required type="month" value={startMonth} onChange={(e) => setStartMonth(e.target.value)} /></label>
+    <div className="notice notice-warning"><strong>Changing the start month recalculates later rollover balances.</strong> It does not change transactions or monthly budget versions.</div>
+    <p className="field-help">The selected month must have a monthly budget version in effect.</p>
     <SaveNotice result={matchingResult} />
-    <button className="primary-button" disabled={isSaving} type="submit">{isSaving ? "Saving…" : "Save budget setup"}</button>
+    <button className="primary-button" disabled={isSaving} type="submit">{isSaving ? "Saving…" : "Save rollover settings"}</button>
   </form>;
 }
 
@@ -195,13 +204,13 @@ export default function AdminView({ screen, saveResult, onSave, importContent }:
 }) {
   const [section, setSection] = React.useState<Section>("import");
   return <main>
-    <section className="overview-heading"><div><p className="eyebrow">Configuration</p><h1>Admin</h1><p className="lede">Manage imports, merchant defaults, and the rollover budget foundation.</p></div></section>
+    <section className="overview-heading"><div><p className="eyebrow">Configuration</p><h1>Admin</h1><p className="lede">Manage imports, merchant defaults, monthly budgets, and when rollover tracking begins.</p></div></section>
     <nav className="admin-nav" aria-label="Admin sections">
-      {([['import', 'Import'], ['merchants', 'Merchant defaults'], ['budget', 'Monthly budget'], ['setup', 'Budget setup']] as Array<[Section, string]>).map(([value, label]) =>
+      {([['import', 'Import'], ['merchants', 'Merchant defaults'], ['budget', 'Monthly budget'], ['rollover', 'Rollover']] as Array<[Section, string]>).map(([value, label]) =>
         <button aria-current={section === value ? "page" : undefined} key={value} onClick={() => setSection(value)} type="button">{label}</button>)}
     </nav>
     {section === "import" ? importContent : section === "merchants" ? <MerchantAdmin screen={screen} onSave={onSave} result={saveResult} />
       : section === "budget" ? <BudgetAdmin screen={screen} onSave={onSave} result={saveResult} />
-      : <SetupAdmin screen={screen} onSave={onSave} result={saveResult} />}
+      : <RolloverAdmin screen={screen} onSave={onSave} result={saveResult} />}
   </main>;
 }

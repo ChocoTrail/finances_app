@@ -151,12 +151,15 @@ Rscript -e 'shiny::runApp(".")'
 ## Read-only Overview
 
 Overview defaults to the current month and reads its five category cards from
-the database-backed rollover ledger. A total monthly budget summary leads into
-category cards ordered around everyday spending first and housing last. Each
-card emphasizes spending progress with a prominent percentage and progress
+the database-backed rollover ledger. Category cards are ordered around everyday
+spending first and housing last, followed by a total monthly budget summary.
+Each card emphasizes spending progress with a prominent percentage and progress
 bar, while the monthly allocation and independently carried rollover balance
-appear as supporting context. Negative balances are indicated by a restrained
-error-colored value rather than a prominent deficit treatment.
+appear as supporting context. Current-month cards use success through the
+month's prorated spending level, warning above that pace through 100%, and
+danger above 100%. Completed months use success through 100% and danger above
+it. Text labels accompany every state, and negative rollover balances retain a
+restrained error-colored value rather than a separate card treatment.
 
 The update context reports the latest successful coverage date for checking
 and both credit cards. Selecting a category opens a read-only transaction list
@@ -179,8 +182,10 @@ saved history.
 ## Administration
 
 Admin provides the import workflow, merchant-default management, and audited
-budget configuration. Budget versions have an effective month, monthly total,
-per-category allocations, budget start month, and category opening balances.
+budget configuration. Monthly budget versions have an effective month, total,
+and per-category allocations. The separate Rollover section controls the first
+month shown in Overview. Changing the rollover start recalculates later carried
+balances without changing transactions or saved monthly budget versions.
 Validation requires category allocations to equal the monthly total before an
 atomic save is allowed.
 
