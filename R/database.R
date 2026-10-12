@@ -134,6 +134,20 @@ connect_app_finance_database <- function(
     )
   }
 
+  if (!read_only) {
+    tryCatch(
+      apply_database_migrations(connection),
+      error = function(error) {
+        disconnect_finance_database(connection)
+        stop(
+          "Could not update the finance database: ",
+          conditionMessage(error),
+          call. = FALSE
+        )
+      }
+    )
+  }
+
   connection
 }
 

@@ -128,6 +128,75 @@ test_that("transaction decision save is atomic and audited", {
   expect_equal(refreshed$transactions[[1]]$display_treatment, "reimbursable")
 })
 
+test_that("budget date moves a transaction without changing its imported date", {
+  connection <- transaction_maintenance_connection_factory()
+  on.exit(disconnect_finance_database(connection), add = TRUE)
+  transaction_id <- DBI::dbGetQuery(
+    connection,
+    paste(
+      "SELECT transaction_id FROM transactions",
+      "WHERE standardized_description = 'NEW MERCHANT'"
+    )
+  )$transaction_id[[1]]
+
+  save_transaction_decision(connection, list(
+    request_id = "request-budget-date-001",
+    transaction_id = transaction_id,
+    category_code = "personal_discretionary",
+    is_reimbursable = FALSE,
+    is_excluded = FALSE,
+    note = "Count this in April",
+    budget_effective_date = "2026-04-30"
+  ))
+  april <- build_transaction_screen_contract(
+    connection,
+    filters = list(
+      start_date = "2026-04-01",
+      end_date = "2026-04-30",
+      search = "new merchant"
+    ),
+    today = as.Date("2026-05-15")
+  )
+  may <- build_transaction_screen_contract(
+    connection,
+    filters = list(
+      start_date = "2026-05-01",
+      end_date = "2026-05-31",
+      search = "new merchant"
+    ),
+    today = as.Date("2026-05-15")
+  )
+  source_date <- DBI::dbGetQuery(
+    connection,
+    "SELECT transaction_date FROM transactions WHERE transaction_id = ?",
+    params = list(transaction_id)
+  )$transaction_date[[1]]
+
+  expect_equal(april$total_count, 1L)
+  expect_equal(april$transactions[[1]]$date, "2026-04-30")
+  expect_equal(april$transactions[[1]]$original_date, "2026-05-05")
+  expect_equal(april$transactions[[1]]$budget_effective_date, "2026-04-30")
+  expect_equal(may$total_count, 0L)
+  expect_equal(as.character(source_date), "2026-05-05")
+
+  save_transaction_decision(connection, list(
+    request_id = "request-budget-date-002",
+    transaction_id = transaction_id,
+    category_code = "personal_discretionary",
+    is_reimbursable = FALSE,
+    is_excluded = FALSE,
+    note = NULL,
+    budget_effective_date = NULL
+  ))
+  reset <- build_transaction_screen_contract(
+    connection,
+    filters = list(start_date = NULL, end_date = NULL, search = "new merchant"),
+    today = as.Date("2026-05-15")
+  )
+  expect_equal(reset$transactions[[1]]$date, "2026-05-05")
+  expect_null(reset$transactions[[1]]$budget_effective_date)
+})
+
 test_that("repeated decision request is idempotent", {
   connection <- transaction_maintenance_connection_factory()
   on.exit(disconnect_finance_database(connection), add = TRUE)

@@ -1,4 +1,17 @@
 read_database_transactions <- function(connection) {
+  has_budget_effective_date <- "budget_effective_date" %in%
+    DBI::dbListFields(connection, "transaction_decisions")
+  effective_date_expression <- if (has_budget_effective_date) {
+    "coalesce(d.budget_effective_date, t.transaction_date)"
+  } else {
+    "t.transaction_date"
+  }
+  budget_date_expression <- if (has_budget_effective_date) {
+    "d.budget_effective_date"
+  } else {
+    "CAST(NULL AS DATE)"
+  }
+
   DBI::dbGetQuery(
     connection,
     paste(
@@ -15,7 +28,9 @@ read_database_transactions <- function(connection) {
       "SELECT",
       "t.transaction_id,",
       "t.account,",
-      "t.transaction_date AS date,",
+      paste0(effective_date_expression, " AS date,"),
+      "t.transaction_date AS original_date,",
+      paste0(budget_date_expression, " AS budget_effective_date,"),
       "t.standardized_description AS description,",
       "CAST(t.standardized_amount AS DOUBLE) AS amount,",
       "t.standardized_check_number AS check_number,",
@@ -43,6 +58,8 @@ read_database_transactions <- function(connection) {
   ) |>
     dplyr::mutate(
       date = as.Date(date),
+      original_date = as.Date(original_date),
+      budget_effective_date = as.Date(budget_effective_date),
       is_budget_relevant =
         transaction_type %in% c("expense", "refund", "category_offset") &
         !is_reimbursable &

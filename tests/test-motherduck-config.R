@@ -115,6 +115,11 @@ run_test("application connector opens the configured local database", {
     TRUE,
     "Expected the configured local database file to be created."
   )
+  expect_equal(
+    database_migration_status(connection)$status,
+    rep("applied", 3),
+    "Expected the application connection to apply pending migrations."
+  )
 })
 
 run_test("schema selection isolates the complete finance contract", {

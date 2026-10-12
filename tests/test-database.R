@@ -87,11 +87,11 @@ run_test("migrations create the complete schema and are idempotent", {
       "transactions"
     ))
 
-    expect_equal(nrow(first_run), 2L, "Expected two applied migrations.")
+    expect_equal(nrow(first_run), 3L, "Expected three applied migrations.")
     expect_equal(second_run, first_run, "Expected migration reruns to be safe.")
     expect_equal(
       migration_status$status,
-      c("applied", "applied"),
+      rep("applied", 3),
       "Expected every available migration to be applied."
     )
     expect_equal(

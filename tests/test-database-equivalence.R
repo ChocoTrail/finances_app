@@ -173,14 +173,17 @@ if (all(file.exists(baseline_files))) {
       ) |>
       calculate_budget_amounts()
 
-    pipeline_rollover_ledger <- build_monthly_rollover_ledger(
-      pipeline_transactions,
-      get_monthly_allocations(),
-      opening_balance = 0
-    )
-
     connection <- connect_finance_database(baseline_files[[5]], read_only = TRUE)
     on.exit(disconnect_finance_database(connection), add = TRUE)
+    opening_balances <- read_database_opening_balances(connection)
+    rollover_start_month <- unique(opening_balances$budget_start_month)
+
+    pipeline_rollover_ledger <- build_monthly_rollover_ledger(
+      pipeline_transactions |>
+        dplyr::filter(date >= rollover_start_month),
+      get_monthly_allocations(),
+      opening_balance = unique(opening_balances$configured_opening_balance)
+    )
 
     comparison <- compare_pipeline_to_database(
       connection,

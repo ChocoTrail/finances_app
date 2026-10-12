@@ -194,6 +194,8 @@ format_transaction_screen_rows <- function(rows) {
       transaction_id,
       account,
       date,
+      original_date,
+      budget_effective_date,
       description,
       amount,
       category_code,
@@ -213,6 +215,8 @@ format_transaction_screen_rows <- function(rows) {
         account = account,
         account_label = unname(account_labels[[account]]),
         date = as.character(date),
+        original_date = as.character(original_date),
+        budget_effective_date = if (is.na(budget_effective_date)) NULL else as.character(budget_effective_date),
         description = description,
         amount = amount,
         category_code = category_code,
@@ -316,6 +320,8 @@ build_transaction_screen_contract <- function(
       transaction_id,
       account,
       date,
+      original_date,
+      budget_effective_date,
       description,
       amount,
       category_code,
@@ -367,6 +373,18 @@ normalize_transaction_decision_request <- function(request) {
   is_reimbursable <- decision_request_field(request, "is_reimbursable")
   is_excluded <- decision_request_field(request, "is_excluded")
   note <- if ("note" %in% names(request)) request$note else NULL
+  budget_effective_date <- if (
+    "budget_effective_date" %in% names(request) &&
+      !is.null(request$budget_effective_date) &&
+      !identical(request$budget_effective_date, "")
+  ) {
+    normalize_optional_filter_date(
+      request$budget_effective_date,
+      "Budget date"
+    )
+  } else {
+    as.Date(NA)
+  }
 
   if (
     length(request_id) != 1 ||
@@ -419,7 +437,8 @@ normalize_transaction_decision_request <- function(request) {
     category_code = category_code,
     is_reimbursable = is_reimbursable,
     is_excluded = is_excluded,
-    note = note
+    note = note,
+    budget_effective_date = budget_effective_date
   )
 }
 
@@ -472,7 +491,8 @@ save_transaction_decision <- function(
     paste(
       "SELECT",
       "transaction_id, category_code, assignment_source, assignment_rule,",
-      "review_state, budget_treatment, is_reimbursable, is_excluded, note",
+      "review_state, budget_treatment, is_reimbursable, is_excluded, note,",
+      "budget_effective_date",
       "FROM transaction_decisions",
       "WHERE transaction_id = ?"
     ),
@@ -496,7 +516,12 @@ save_transaction_decision <- function(
     budget_treatment = before$budget_treatment[[1]],
     is_reimbursable = request$is_reimbursable,
     is_excluded = request$is_excluded,
-    note = request$note
+    note = request$note,
+    budget_effective_date = if (is.na(request$budget_effective_date)) {
+      NA_character_
+    } else {
+      as.character(request$budget_effective_date)
+    }
   )
   after_json <- as.character(jsonlite::toJSON(
     after,
@@ -530,6 +555,7 @@ save_transaction_decision <- function(
         "is_reimbursable = ?,",
         "is_excluded = ?,",
         "note = ?,",
+        "budget_effective_date = ?,",
         "updated_at = ?",
         "WHERE transaction_id = ?"
       ),
@@ -538,6 +564,7 @@ save_transaction_decision <- function(
         request$is_reimbursable,
         request$is_excluded,
         request$note,
+        request$budget_effective_date,
         as.POSIXct(changed_at, tz = "UTC"),
         request$transaction_id
       )

@@ -20,6 +20,8 @@ export type TransactionRow = {
   account: string;
   account_label: string;
   date: string;
+  original_date: string;
+  budget_effective_date: string | null;
   description: string;
   amount: number;
   category_code: string | null;
@@ -58,6 +60,7 @@ export type TransactionSaveRequest = {
   is_reimbursable: boolean;
   is_excluded: boolean;
   note: string | null;
+  budget_effective_date: string | null;
 };
 
 export type TransactionSaveResult = {
@@ -256,6 +259,9 @@ function TransactionEditor({
   );
   const [isReimbursable, setIsReimbursable] = React.useState(transaction.is_reimbursable);
   const [isExcluded, setIsExcluded] = React.useState(transaction.is_excluded);
+  const [budgetDate, setBudgetDate] = React.useState(
+    transaction.budget_effective_date ?? transaction.original_date,
+  );
   const [note, setNote] = React.useState(transaction.note ?? "");
   const [requestId, setRequestId] = React.useState<string | null>(null);
   const isSaving = Boolean(requestId) && saveResult?.request_id !== requestId;
@@ -280,6 +286,7 @@ function TransactionEditor({
       is_reimbursable: isReimbursable,
       is_excluded: isExcluded,
       note: note.trim() || null,
+      budget_effective_date: budgetDate === transaction.original_date ? null : budgetDate,
     });
   };
 
@@ -293,6 +300,14 @@ function TransactionEditor({
               <option key={option.value} value={option.value}>{option.label}</option>
             ))}
           </select>
+        </label>
+        <label className="filter-field budget-date-field">
+          <span>Budget date</span>
+          <input required type="date" value={budgetDate} onChange={(event) => setBudgetDate(event.target.value)} />
+          <small>Original: {formatDate(transaction.original_date)}</small>
+          {budgetDate !== transaction.original_date && (
+            <button className="inline-reset" onClick={() => setBudgetDate(transaction.original_date)} type="button">Use original date</button>
+          )}
         </label>
         <label className="check-field">
           <input
@@ -331,7 +346,7 @@ function TransactionEditor({
           {isSaving ? "Saving…" : "Save decision"}
         </button>
       </div>
-      <p className="editor-note">This changes only this transaction. Merchant defaults are managed separately.</p>
+      <p className="editor-note">Category and Budget date changes affect only this transaction. The imported bank date never changes.</p>
     </div>
   );
 }
@@ -415,7 +430,9 @@ export default function TransactionsView({
                 <div className="transaction-summary">
                   <div className="transaction-description">
                     <strong>{transaction.description}</strong>
-                    <span>{formatDate(transaction.date)} · {transaction.account_label}</span>
+                    <span>{formatDate(transaction.original_date)} · {transaction.account_label}
+                      {transaction.budget_effective_date && <> · Budgeted {formatDate(transaction.date)}</>}
+                    </span>
                   </div>
                   <div className="transaction-category">
                     <span>Category</span>

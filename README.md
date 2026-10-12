@@ -56,6 +56,9 @@ Create the initial local database with:
 Rscript scripts/04_initialize_database.R
 ```
 
+The app also applies any pending database migrations automatically when it
+connects. Restart the app after pulling a version that adds a migration.
+
 The initializer applies pending files from `migrations/`, then seeds the fixed
 categories, current transactions and decisions, merchant rules, April 2026
 budget version, and zero opening balances. It refuses to overwrite a database
@@ -172,19 +175,21 @@ treatment, review-state, and description-search filters. Review shows all
 saved decisions still marked pending, independent of the current month.
 
 The three-dot action expands a transaction-specific editor for category,
-reimbursable status, budget exclusion, and an optional note. Each save confirms
-the decision and writes its before-and-after state to the audit log in the same
-database transaction. Repeated save requests are idempotent, and failures roll
-back the complete edit. Merchant-default management stays separate from
-one-off transaction correction so a prospective rule never silently rewrites
-saved history.
+budget date, reimbursable status, budget exclusion, and an optional note. The
+budget date can move activity to another month without changing its imported
+bank date. Each save confirms the decision and writes its before-and-after
+state to the audit log in the same database transaction. Repeated save requests
+are idempotent, and failures roll back the complete edit. Merchant-default
+management stays separate from one-off transaction correction so a prospective
+rule never silently rewrites saved history.
 
 ## Administration
 
 Admin provides the import workflow, merchant-default management, and audited
 budget configuration. Monthly budget versions have an effective month, total,
-and per-category allocations. The separate Rollover section controls the first
-month shown in Overview. Changing the rollover start recalculates later carried
+and per-category allocations. The separate Rollover section controls when
+balances begin carrying forward. Earlier transaction months remain browsable
+without rollover. Changing the rollover start recalculates later carried
 balances without changing transactions or saved monthly budget versions.
 Validation requires category allocations to equal the monthly total before an
 atomic save is allowed.

@@ -12,6 +12,7 @@
 - Account freshness reports the latest successful coverage date for every supported account.
 - Selecting a category opens a read-only transaction list filtered to that category and month.
 - The filtered list distinguishes spending, refunds, and category offsets.
+- A transaction can use an optional Budget date to affect a different month while preserving its original imported bank date.
 - The screen contract is purpose-built and does not expose database tables directly.
 
 ## Transaction maintenance
@@ -30,8 +31,10 @@
 ## Configuration administration
 
 - Admin keeps upload preview, merchant defaults, monthly budgets, and rollover settings in one place.
-- Merchant defaults use an alphabetical searchable list with simple Food & Living, Personal, Transportation, and Housing choices; recently seen merchants appear in a separate panel.
+- Merchant defaults use three collapsible cards for recently seen merchants, merchants without a default, and an alphabetical searchable list of all merchants, with simple Food & Living, Personal, Transportation, and Housing choices.
 - Merchant default changes apply to future imports only. Rainy Day is assigned to individual transactions.
+- Overview can browse budgeted transaction months before the rollover start; those months show monthly remaining amounts without carrying balances forward.
+- The total monthly budget card summarizes net spending progress and separately shows how much remains from the monthly budget after including the combined rollover entering the selected month.
 - Merchant defaults are searchable and expandable and can be created, edited, or deactivated, but never deleted.
 - Merchant changes affect future imports unless the user deliberately chooses to apply an active rule to matching existing transactions.
 - Every merchant save is server-validated, atomic, audited, and idempotent.
