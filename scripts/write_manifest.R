@@ -18,31 +18,23 @@ runtime_files <- c(
       "transaction_service.R"
     )
   ),
+  file.path(
+    "migrations",
+    c(
+      "001_initial_schema.sql",
+      "002_transaction_sightings.sql",
+      "003_budget_effective_date.sql"
+    )
+  ),
   file.path("www", c("ui.css", "ui.js")),
   file.path(
     "www",
     "brand",
     c(
-      "README.md",
       "fonts/AzeretMono-Variable.ttf",
-      "fonts/Mina-Bold.ttf",
       "fonts/OFL-AzeretMono.txt",
-      "fonts/OFL-Mina.txt",
       "fonts/OFL-Recursive.txt",
-      "fonts/Recursive-Variable.ttf",
-      "logo/favicon/favicon-16.png",
-      "logo/favicon/favicon-32.png",
-      "logo/favicon/favicon-48.png",
-      "logo/favicon/favicon.svg",
-      "logo/svg/choco-trail-lockup-horizontal-current-outlined.svg",
-      "logo/svg/choco-trail-lockup-horizontal-ink-outlined.svg",
-      "logo/svg/choco-trail-lockup-horizontal-paper-outlined.svg",
-      "logo/svg/choco-trail-mark-current.svg",
-      "logo/svg/choco-trail-mark-ink.svg",
-      "logo/svg/choco-trail-mark-paper.svg",
-      "logo/svg/choco-trail-wordmark-current-outlined.svg",
-      "logo/svg/choco-trail-wordmark-ink-outlined.svg",
-      "logo/svg/choco-trail-wordmark-paper-outlined.svg"
+      "fonts/Recursive-Variable.ttf"
     )
   )
 )

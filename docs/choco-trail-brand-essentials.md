@@ -1,9 +1,8 @@
 # Choco Trail brand essentials
 
-> This is the finance application's checked-in snapshot of the Choco Trail
-> brand essentials. Approved deployment assets are stored under `www/brand/`.
-> The source brand package is maintained separately in the `personal_brand`
-> project.
+> This is the finance application's checked-in reference for the color,
+> typography, spacing, and accessibility principles adapted from the Choco
+> Trail design system. The app does not display the Choco Trail name or logo.
 
 Choco Trail is a personal identity for exploratory projects, analytical work, and small tools with personal implications. It signals that the work is considered and cared for without presenting it as institutional, corporate, or grander than it is.
 
@@ -29,49 +28,12 @@ The identity's central visual thread is a river or current: movement that is cal
 
 The palette is also informed by family, place, coastal contrast, desert heat, turquoise, and Native jewelry. Choco Trail does not reproduce or imitate Tulalip, Coast Salish, Navajo, or other culturally specific forms or motifs.
 
-## Logo
-
-![C1 Whisper beside the Choco Trail wordmark](../www/brand/logo/svg/choco-trail-lockup-horizontal-ink-outlined.svg)
-
-The logo combines the **C1 Whisper** mark with the Choco Trail wordmark in **Mina Bold**.
-
-### Approved forms
-
-- Primary horizontal lockup: C1 Whisper beside the wordmark.
-- Mark alone: avatars, favicons, compact navigation, and small endorsements.
-- Wordmark alone: places where the name matters more than recognition of the mark.
-- Small mark: the approved mark exported directly at favicon scale; no alternate drawing is introduced.
-
-### Color
-
-- Canonical: Ink on River Stone Paper.
-- Reversed: Paper on Ink.
-- Alternate: Current Turquoise on a quiet light background.
-- Do not use Comet Dust or semantic colors for the core logo.
-
-### Space and size
-
-- Keep clear space equal to at least the diameter of the mark's hollow circle.
-- Keep the standard mark at least 48 CSS pixels tall when its fine lines must remain visible.
-- Keep the horizontal lockup at least 180 CSS pixels wide.
-- Use the dedicated favicon exports at 32 pixels and below.
-- Increase these minimums for low-quality printing, embroidery, engraving, or other coarse reproduction.
-
-### Do not
-
-- Rotate, reflect, stretch, or rearrange the mark.
-- Change the relative streak lengths or add particles and splatters.
-- Add gradients, shadows, outlines, glows, or decorative animation.
-- Place the logo directly over busy imagery without a quiet, high-contrast field.
-- Rotate or reverse the approved orientation. The ring belongs at the lower left, with the streaks extending up and right.
-
 ## Typography
 
-All three typefaces are open-source Google Fonts.
+Both typefaces are open-source Google Fonts.
 
 | Role | Typeface | Working specification |
 |---|---|---|
-| Wordmark | [Mina](https://fonts.google.com/specimen/Mina) | Bold 700; logo and rare brand-signature use only |
 | Interface and body | [Recursive](https://fonts.google.com/specimen/Recursive) | Sans Linear; `CASL 0`, `MONO 0`, `slnt 0`, `CRSV 0.5`; weights 400 and 500 |
 | Numbers, tables, charts, and code | [Azeret Mono](https://fonts.google.com/specimen/Azeret+Mono) | Weights 400 and 500; use tabular alignment where appropriate |
 
@@ -81,7 +43,6 @@ All three typefaces are open-source Google Fonts.
 - Use Recursive 500 for headings and important labels.
 - Use Recursive 400 for body text, supporting copy, and controls.
 - Use Azeret Mono for measured values, code, table numbers, axis values, and compact technical metadata.
-- Keep Mina out of body copy, ordinary headings, controls, and data displays.
 - Use uppercase sparingly, mainly for short metadata or eyebrow labels.
 - Favor generous line spacing and relatively short readable line lengths.
 
@@ -92,7 +53,7 @@ All three typefaces are open-source Google Fonts.
 | Token | Hex | Use |
 |---|---|---|
 | River Stone Paper | `#F4F3EF` | Default page background |
-| Ink | `#22292B` | Primary text, logo, and high-emphasis structure |
+| Ink | `#22292B` | Primary text and high-emphasis structure |
 | Surface | `#E5E9E6` | Quiet panels and secondary fields |
 | Border | `#C1C9C5` | Rules, dividers, and inactive boundaries |
 | Muted | `#5F6969` | Secondary text and nonessential metadata |
@@ -186,15 +147,6 @@ Prefer "Use this to compare results and accentuate differences" over "Our advanc
 
 For analytical writing, distinguish clearly between what the data shows, what is inferred from it, and what remains uncertain.
 
-## Endorsed projects
-
-Choco Trail uses an endorsed-project model:
-
-- Let the project name remain primary.
-- Use the C1 Whisper mark or full lockup quietly in an opening, footer, about screen, or repository documentation.
-- Use the phrase **A Choco Trail project** when prose is more appropriate than a logo.
-- Each project may decide how tightly to follow the rest of the brand system.
-
 ## Iconography and imagery
 
 Neither icons nor imagery are fixed identity elements.
@@ -226,7 +178,7 @@ References: [WCAG 2.2](https://www.w3.org/TR/WCAG22/), [Understanding non-text c
 The system does not currently define:
 
 - A dark theme.
-- A decorative river/current motif beyond the logo concept.
+- A decorative river/current motif.
 - A custom icon family.
 - A mandatory illustration or photography style.
 - A universal categorical chart palette.
@@ -238,7 +190,5 @@ These are not missing pieces. Add them only after recurring project needs make t
 ## Asset index
 
 - Web font files and licenses: `www/brand/fonts/`
-- Approved web logo SVGs: `www/brand/logo/svg/`
-- Favicons: `www/brand/logo/favicon/`
-- Canonical editable masters, asset builders, raster exports, and the full PDF
-  reference remain in the separate `personal_brand` project.
+- The broader source design system remains in the separate `personal_brand`
+  project.

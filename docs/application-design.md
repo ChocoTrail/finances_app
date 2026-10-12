@@ -93,8 +93,8 @@ following month but permits a deliberate change to the current month.
 ### Budget start and opening balances
 
 The initial budget period begins in April 2026 with a zero opening balance for
-each category. The budget start month and category opening balances will be
-configurable so this assumption can be revised later.
+each category. The rollover start month is configurable; opening balances are
+initialization data and are not exposed as an ongoing admin setting.
 
 ### Rollover calculation
 
@@ -379,10 +379,9 @@ and Transactions experiences must be mobile-friendly from the beginning.
 ## Visual design
 
 Visual implementation follows the checked-in
-[Choco Trail brand essentials](choco-trail-brand-essentials.md). The finance
-application is an endorsed project: the application name remains primary, and
-the Choco Trail mark or lockup appears quietly in an about surface, footer, or
-other secondary location rather than acting as the product name.
+[design essentials](choco-trail-brand-essentials.md) adapted from the Choco
+Trail visual system. The application uses its color, typography, spacing, and
+accessibility principles without displaying the Choco Trail name or logo.
 
 The guide determines:
 
@@ -396,11 +395,10 @@ Negative category balances use Cinder Red, which the style guide reserves for
 genuinely negative values and errors. A deficit must also be identified with
 text, an icon, or another non-color cue.
 
-The approved fonts, logo SVGs, and favicons are copied into `www/brand/` so the
-deployed application does not depend on the sibling `personal_brand` repository
-or a third-party font service. The client loads Recursive for interface text,
-Azeret Mono for financial and tabular values, and Mina Bold only for the Choco
-Trail wordmark. Font license files remain beside the font files.
+The approved fonts are copied into `www/brand/` so the deployed application
+does not depend on the sibling `personal_brand` repository or a third-party
+font service. The client loads Recursive for interface text and Azeret Mono
+for financial and tabular values. Font license files remain beside the fonts.
 
 Finance-specific components such as category cards, transaction rows, import
 previews, and review dialogs apply the guide's tokens and principles; the guide
@@ -550,7 +548,7 @@ Implementation should proceed in small, reviewable steps.
 ### 9. Add configuration
 
 - Add merchant-default management.
-- Add budget versions, totals, allocations, start date, and opening balances.
+- Add budget versions, totals, allocations, and the rollover start date.
 
 ### 10. Apply the style guide
 

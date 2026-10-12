@@ -240,35 +240,6 @@
         "Built": "R 4.6.0; aarch64-apple-darwin20; 2026-09-24 05:28:53 UTC; unix"
       }
     },
-    "blob": {
-      "Source": "PPM",
-      "Repository": "https://packagemanager.posit.co/cran/latest",
-      "description": {
-        "Package": "blob",
-        "Title": "A Simple S3 Class for Representing Vectors of Binary Data\n('BLOBS')",
-        "Version": "1.3.0",
-        "Authors@R": "c(\n    person(\"Hadley\", \"Wickham\", role = \"aut\"),\n    person(\"Kirill\", \"Müller\", , \"kirill@cynkra.com\", role = \"cre\"),\n    person(\"RStudio\", role = c(\"cph\", \"fnd\"))\n  )",
-        "Description": "R's raw vector is useful for storing a single binary object.\n    What if you want to put a vector of them in a data frame? The 'blob'\n    package provides the blob object, a list of raw vectors, suitable for\n    use as a column in data frame.",
-        "License": "MIT + file LICENSE",
-        "URL": "https://blob.tidyverse.org, https://github.com/tidyverse/blob",
-        "BugReports": "https://github.com/tidyverse/blob/issues",
-        "Imports": "methods, rlang, vctrs (>= 0.2.1)",
-        "Suggests": "covr, crayon, pillar (>= 1.2.1), testthat (>= 3.0.0)",
-        "Config/autostyle/scope": "line_breaks",
-        "Config/autostyle/strict": "false",
-        "Config/Needs/website": "tidyverse/tidytemplate",
-        "Config/testthat/edition": "3",
-        "Encoding": "UTF-8",
-        "RoxygenNote": "7.3.3.9000",
-        "NeedsCompilation": "no",
-        "Packaged": "2026-01-13 06:57:54 UTC; kirill",
-        "Author": "Hadley Wickham [aut],\n  Kirill Müller [cre],\n  RStudio [cph, fnd]",
-        "Maintainer": "Kirill Müller <kirill@cynkra.com>",
-        "Repository": "RSPM",
-        "Date/Publication": "2026-01-14 09:10:14 UTC",
-        "Built": "R 4.6.0; ; 2026-09-24 21:19:37 UTC; unix"
-      }
-    },
     "brio": {
       "Source": "PPM",
       "Repository": "https://packagemanager.posit.co/cran/latest",
@@ -553,39 +524,6 @@
         "Repository": "RSPM",
         "Date/Publication": "2026-08-25 16:40:02 UTC",
         "Built": "R 4.6.0; aarch64-apple-darwin20; 2026-09-24 07:23:20 UTC; unix"
-      }
-    },
-    "dbplyr": {
-      "Source": "PPM",
-      "Repository": "https://packagemanager.posit.co/cran/latest",
-      "description": {
-        "Type": "Package",
-        "Package": "dbplyr",
-        "Title": "A 'dplyr' Back End for Databases",
-        "Version": "2.6.0",
-        "Authors@R": "c(\n    person(\"Hadley\", \"Wickham\", , \"hadley@posit.co\", role = c(\"aut\", \"cre\")),\n    person(\"Maximilian\", \"Girlich\", role = \"aut\"),\n    person(\"Edgar\", \"Ruiz\", role = \"aut\"),\n    person(\"Posit Software, PBC\", role = c(\"cph\", \"fnd\"))\n  )",
-        "Description": "A 'dplyr' back end for databases that allows you to work with\n    remote database tables as if they are in-memory data frames.  Basic\n    features work with any database that has a 'DBI' back end; more\n    advanced features require 'SQL' translation to be provided by the\n    package author.",
-        "License": "MIT + file LICENSE",
-        "URL": "https://dbplyr.tidyverse.org/, https://github.com/tidyverse/dbplyr",
-        "BugReports": "https://github.com/tidyverse/dbplyr/issues",
-        "Depends": "R (>= 4.1)",
-        "Imports": "blob (>= 1.2.0), cli (>= 3.6.1), DBI (>= 1.1.3), dplyr (>=\n1.1.2), glue (>= 1.6.2), lifecycle (>= 1.0.3), magrittr,\nmethods, pillar (>= 1.9.0), purrr (>= 1.0.1), R6 (>= 2.2.2),\nrlang (>= 1.1.1), tibble (>= 3.2.1), tidyr (>= 1.3.0),\ntidyselect (>= 1.2.1), utils, vctrs (>= 0.6.3), withr (>=\n2.5.0)",
-        "Suggests": "adbcdrivermanager, adbcsqlite, adbi, bit64, covr, knitr,\nLahman, nycflights13, odbc (>= 1.4.2), RJDBC, RMariaDB (>=\n1.2.2), rmarkdown, RPostgres (>= 1.4.5), RPostgreSQL, RSQLite\n(>= 2.3.8), testthat (>= 3.1.10)",
-        "VignetteBuilder": "knitr",
-        "Config/Needs/website": "tidyverse/tidytemplate",
-        "Config/testthat/edition": "3",
-        "Config/testthat/parallel": "TRUE",
-        "Encoding": "UTF-8",
-        "Language": "en-gb",
-        "Collate": "'verb-copy-inline.R' 'verb-copy-to.R' 'db-sql.R' 'db.R'\n'utils-check.R' 'import-standalone-types-check.R'\n'import-standalone-obj-type.R' 'utils.R' 'sql.R' 'escape.R'\n'translate-sql-cut.R' 'translate-sql-string.R'\n'translate-sql-aggregate.R' 'translate-sql-scalar.R'\n'translate-sql-helpers.R' 'translate-sql-window.R'\n'translate-sql-conditional.R' 'backend-.R' 'backend-access.R'\n'backend-adbc.R' 'backend-db2.R' 'backend-hana.R'\n'backend-hive.R' 'backend-impala.R' 'backend-jdbc.R'\n'backend-mssql.R' 'backend-mysql.R' 'backend-odbc.R'\n'backend-oracle.R' 'backend-postgres.R'\n'backend-postgres-old.R' 'backend-redshift.R'\n'backend-snowflake.R' 'backend-spark-sql.R' 'backend-sqlite.R'\n'backend-teradata.R' 'backward-compatibility.R'\n'bind-queries.R' 'data-cache.R' 'data-lahman.R'\n'data-nycflights13.R' 'db-io.R' 'dbplyr.R' 'ident.R'\n'import-standalone-s3-register.R' 'join-by-compat.R'\n'join-cols-compat.R' 'lazy-ops.R' 'memdb.R' 'optimise-utils.R'\n'progress.R' 'query-base.R' 'query-join.R' 'query-rf-join.R'\n'query-select.R' 'query-semi-join.R' 'query-set-op.R'\n'query-union.R' 'query.R' 'remote.R' 'rows.R' 'schema.R'\n'sql-build.R' 'sql-clause.R' 'sql-dialect.R' 'sql-glue.R'\n'sql-quote.R' 'sql-superseded.R' 'src-sql.R' 'src_dbi.R'\n'table-name.R' 'tbl-lazy.R' 'tbl-sql.R' 'tidyeval-across.R'\n'tidyeval.R' 'translate-sql.R' 'utils-format.R'\n'verb-arrange.R' 'verb-collapse.R' 'verb-collect.R'\n'verb-compute.R' 'verb-count.R' 'verb-distinct.R'\n'verb-do-query.R' 'verb-do.R' 'verb-expand.R' 'verb-explain.R'\n'verb-fill.R' 'verb-filter.R' 'verb-group_by.R' 'verb-head.R'\n'verb-joins.R' 'verb-mutate.R' 'verb-pivot-longer.R'\n'verb-pivot-wider.R' 'verb-pull.R' 'verb-select.R'\n'verb-set-ops.R' 'verb-slice.R' 'verb-summarise.R'\n'verb-uncount.R' 'verb-window.R' 'with-dialect.R' 'zzz.R'",
-        "Config/roxygen2/version": "8.0.0",
-        "NeedsCompilation": "no",
-        "Packaged": "2026-06-17 12:33:03 UTC; hadleywickham",
-        "Author": "Hadley Wickham [aut, cre],\n  Maximilian Girlich [aut],\n  Edgar Ruiz [aut],\n  Posit Software, PBC [cph, fnd]",
-        "Maintainer": "Hadley Wickham <hadley@posit.co>",
-        "Repository": "RSPM",
-        "Date/Publication": "2026-06-17 21:50:07 UTC",
-        "Built": "R 4.6.0; ; 2026-06-18 11:59:14 UTC; unix"
       }
     },
     "desc": {
@@ -2536,7 +2474,16 @@
   },
   "files": {
     "app.R": {
-      "checksum": "cd92f6282d596714bef48138a887321c"
+      "checksum": "565a67652ef7581521f7717952ef41c7"
+    },
+    "migrations/001_initial_schema.sql": {
+      "checksum": "deff3c911b6e9d1103ecf2a200877c36"
+    },
+    "migrations/002_transaction_sightings.sql": {
+      "checksum": "5a5e5f897744daae45ea642b3f62f24d"
+    },
+    "migrations/003_budget_effective_date.sql": {
+      "checksum": "5a38db8c6343144c65faa61cd1fa13c7"
     },
     "R/app_server.R": {
       "checksum": "9f0c23995e34a5f0a18d41d843936208"
@@ -2548,19 +2495,19 @@
       "checksum": "fd91bd679e55516e2e727c1bef34d2b0"
     },
     "R/configuration_service.R": {
-      "checksum": "b6907654a86feb38d6dd2513c0785195"
+      "checksum": "1f4b3cffcc515bdce3ef914eb4d31a03"
     },
     "R/database_queries.R": {
-      "checksum": "594f5b8c165a067dba983dabf65e4686"
+      "checksum": "a61eb4a15a24cc888085eb43d4b0c6ff"
     },
     "R/database.R": {
-      "checksum": "95d562682f332d24d7d41a67e187b6a4"
+      "checksum": "1815d37b1a13ecbdc8b833e9aa68776d"
     },
     "R/import_service.R": {
       "checksum": "9a0ff85e8aef648563b20b2d0b3ce1e5"
     },
     "R/overview_service.R": {
-      "checksum": "153b62863dd8c90c62619084dab37f7d"
+      "checksum": "84dd575d7de73948939a0d9f018bf625"
     },
     "R/prototype_contracts.R": {
       "checksum": "ac910487f6f4b20b8a61f9da95ac08ae"
@@ -2569,22 +2516,16 @@
       "checksum": "47b4ae61c0c77738006ea43939fc7f7d"
     },
     "R/transaction_service.R": {
-      "checksum": "c3c26f6467374747e919c537dc200e0f"
+      "checksum": "99c2a16de45670e1253e42513624d24e"
     },
     "renv.lock": {
-      "checksum": "12eee5bb8513782be4526a307d708d2d"
+      "checksum": "5166a7ed789cf0a796f966bb921c0fcd"
     },
     "www/brand/fonts/AzeretMono-Variable.ttf": {
       "checksum": "ad1d4a5fe95e657eaf0231b629bca704"
     },
-    "www/brand/fonts/Mina-Bold.ttf": {
-      "checksum": "a6d0f9a33665c9239599006a5ce47613"
-    },
     "www/brand/fonts/OFL-AzeretMono.txt": {
       "checksum": "e70b532dbd796f47969978f842390317"
-    },
-    "www/brand/fonts/OFL-Mina.txt": {
-      "checksum": "608b2cd261377541e9e95d924b2c569e"
     },
     "www/brand/fonts/OFL-Recursive.txt": {
       "checksum": "afed17c3f170a767eef778f5eeeacf6d"
@@ -2592,53 +2533,11 @@
     "www/brand/fonts/Recursive-Variable.ttf": {
       "checksum": "353e4d2654f6041c265eac38fd81b507"
     },
-    "www/brand/logo/favicon/favicon-16.png": {
-      "checksum": "78ca24cfe8a72d936cb9b655423824d9"
-    },
-    "www/brand/logo/favicon/favicon-32.png": {
-      "checksum": "aa356af391df4bf4b62783046f388960"
-    },
-    "www/brand/logo/favicon/favicon-48.png": {
-      "checksum": "603b9cfe49f8e5887b6b183103e1902f"
-    },
-    "www/brand/logo/favicon/favicon.svg": {
-      "checksum": "f0e8698dc7488520fe66eede0d7a5251"
-    },
-    "www/brand/logo/svg/choco-trail-lockup-horizontal-current-outlined.svg": {
-      "checksum": "1c33e50196028308206047bab17215af"
-    },
-    "www/brand/logo/svg/choco-trail-lockup-horizontal-ink-outlined.svg": {
-      "checksum": "41ae99c2322ab87423e47e3eeaafc3de"
-    },
-    "www/brand/logo/svg/choco-trail-lockup-horizontal-paper-outlined.svg": {
-      "checksum": "1cabae8837485e7d7f04092de20ffd6b"
-    },
-    "www/brand/logo/svg/choco-trail-mark-current.svg": {
-      "checksum": "5534818bec6e8a2f8d9a042d3d4beefe"
-    },
-    "www/brand/logo/svg/choco-trail-mark-ink.svg": {
-      "checksum": "02322c121f17059e60a9f3825136181d"
-    },
-    "www/brand/logo/svg/choco-trail-mark-paper.svg": {
-      "checksum": "0ebd8a138d55c14c63fa9b8df5cb9d6e"
-    },
-    "www/brand/logo/svg/choco-trail-wordmark-current-outlined.svg": {
-      "checksum": "3e0b91f3390690b7617c5684ea6b7e88"
-    },
-    "www/brand/logo/svg/choco-trail-wordmark-ink-outlined.svg": {
-      "checksum": "04c332c7f980aecc49704a4ff829a61a"
-    },
-    "www/brand/logo/svg/choco-trail-wordmark-paper-outlined.svg": {
-      "checksum": "c6f5663037930de8d6202d6db20db0c2"
-    },
-    "www/brand/README.md": {
-      "checksum": "59118287b44885655746d20fa954ea11"
-    },
     "www/ui.css": {
-      "checksum": "20ccb8f52d7a8e61b8bc8650371df4a1"
+      "checksum": "4032781e4c28055bbb190cf5c286ecc1"
     },
     "www/ui.js": {
-      "checksum": "d2264bb97b3d891e81b8b5616e6fc413"
+      "checksum": "2ba7a4026630d2cbf6a6c6dc09cf08fd"
     }
   },
   "users": null
