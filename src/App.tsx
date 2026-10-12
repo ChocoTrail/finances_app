@@ -336,22 +336,20 @@ function OverviewView({ overview, onMonthChange, onSelectCategory }: {
   const totalSpendingText = totalSpending < 0
     ? `${currency.format(Math.abs(totalSpending))} net credit`
     : `${currency.format(totalSpending)} net spent`;
-  const availableWithRollover = totalMonthlyBudget + rolloverTotal;
-  const remainingWithRollover = availableWithRollover - totalSpending;
-  const remainingProgress = availableWithRollover > 0
-    ? Math.max(0, Math.min(100, (remainingWithRollover / availableWithRollover) * 100))
+  const rolloverAdjustedSpending = totalSpending - rolloverTotal;
+  const budgetUsedWithRollover = Math.max(0, rolloverAdjustedSpending);
+  const rolloverAdjustedProgress = totalMonthlyBudget > 0
+    ? Math.max(0, Math.min(100, (budgetUsedWithRollover / totalMonthlyBudget) * 100))
     : 0;
-  const remainingProgressMaximum = Math.max(0, availableWithRollover);
-  const remainingProgressValue = Math.max(
-    0,
-    Math.min(remainingProgressMaximum, remainingWithRollover),
-  );
-  const remainingText = remainingWithRollover < 0
-    ? `${currency.format(Math.abs(remainingWithRollover))} over`
-    : `${currency.format(remainingWithRollover)} left`;
+  const rolloverAdjustedProgressValue = Math.min(totalMonthlyBudget, budgetUsedWithRollover);
+  const rolloverAdjustedText = budgetUsedWithRollover > totalMonthlyBudget
+    ? `${currency.format(budgetUsedWithRollover)} used · ${currency.format(budgetUsedWithRollover - totalMonthlyBudget)} over budget`
+    : `${currency.format(budgetUsedWithRollover)} of ${currency.format(totalMonthlyBudget)} used`;
   const rolloverContext = rolloverTotal < 0
     ? `${currency.format(Math.abs(rolloverTotal))} rollover deficit`
-    : `${currency.format(rolloverTotal)} rollover included`;
+    : rolloverTotal > 0
+      ? `${currency.format(rolloverTotal)} rollover surplus`
+      : "No rollover";
   const orderedCategories = [...overview.categories].sort((left, right) => {
     const leftIndex = overviewCategoryOrder.indexOf(left.category_code);
     const rightIndex = overviewCategoryOrder.indexOf(right.category_code);
@@ -410,18 +408,20 @@ function OverviewView({ overview, onMonthChange, onSelectCategory }: {
               className="summary-progress-track total" role="progressbar">
               <span style={{ width: `${totalProgress}%` }} />
             </span>
-            <div className="summary-progress-heading remaining-heading">
-              <span>Remaining with rollover</span>
-              <strong className={remainingWithRollover < 0 ? "negative" : undefined}>
-                {remainingText} of {currency.format(availableWithRollover)} · {rolloverContext}
-              </strong>
-            </div>
-            <span aria-label={`${remainingText} from ${currency.format(availableWithRollover)} available, including ${currency.format(rolloverTotal)} rollover`}
-              aria-valuemax={remainingProgressMaximum} aria-valuemin={0}
-              aria-valuenow={remainingProgressValue}
-              className={`summary-progress-track remaining${remainingWithRollover < 0 ? " overspent" : ""}`} role="progressbar">
-              <span style={{ width: `${remainingProgress}%` }} />
-            </span>
+            {overview.rollover_active && <>
+              <div className="summary-progress-heading rollover-heading">
+                <span>Monthly budget after rollover</span>
+                <strong className={budgetUsedWithRollover > totalMonthlyBudget ? "negative" : undefined}>
+                  {rolloverAdjustedText} · {rolloverContext}
+                </strong>
+              </div>
+              <span aria-label={`${rolloverAdjustedText}, including ${currency.format(rolloverTotal)} rollover`}
+                aria-valuemax={totalMonthlyBudget} aria-valuemin={0}
+                aria-valuenow={rolloverAdjustedProgressValue}
+                className={`summary-progress-track rollover-adjusted${budgetUsedWithRollover > totalMonthlyBudget ? " overspent" : ""}`} role="progressbar">
+                <span style={{ width: `${rolloverAdjustedProgress}%` }} />
+              </span>
+            </>}
           </div>
         </section>
       </section>

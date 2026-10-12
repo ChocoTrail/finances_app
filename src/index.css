@@ -986,16 +986,16 @@ main {
   background: var(--summary-pace);
 }
 
-.remaining-heading {
+.rollover-heading {
   margin-top: 14px;
 }
 
-.summary-progress-track.remaining > span {
-  background: var(--success);
+.summary-progress-track.rollover-adjusted > span {
+  background: var(--current);
 }
 
-.summary-progress-track.remaining.overspent {
-  background: color-mix(in srgb, var(--error) 24%, var(--paper));
+.summary-progress-track.rollover-adjusted.overspent > span {
+  background: var(--error);
 }
 
 .summary-progress-heading strong.negative {

@@ -34,7 +34,7 @@
 - Merchant defaults use three collapsible cards for recently seen merchants, merchants without a default, and an alphabetical searchable list of all merchants, with simple Food & Living, Personal, Transportation, and Housing choices.
 - Merchant default changes apply to future imports only. Rainy Day is assigned to individual transactions.
 - Overview can browse budgeted transaction months before the rollover start; those months show monthly remaining amounts without carrying balances forward.
-- The total monthly budget card summarizes net spending progress and separately shows how much remains from the monthly budget after including the combined rollover entering the selected month.
+- The total monthly budget card summarizes net spending progress and separately shows how much of the regular monthly budget is used after a rollover deficit pre-fills the bar or a rollover surplus is consumed first.
 - Merchant defaults are searchable and expandable and can be created, edited, or deactivated, but never deleted.
 - Merchant changes affect future imports unless the user deliberately chooses to apply an active rule to matching existing transactions.
 - Every merchant save is server-validated, atomic, audited, and idempotent.
