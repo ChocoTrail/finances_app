@@ -211,9 +211,7 @@ h3 {
 }
 
 .eyebrow,
-.prototype-tag,
 .status,
-.echo span,
 .metric dt {
   font-size: 0.72rem;
   font-weight: 500;
@@ -238,7 +236,6 @@ h3 {
   margin-bottom: 0;
 }
 
-.prototype-tag,
 .status {
   border: 1px solid var(--border);
   border-radius: 999px;
@@ -525,7 +522,6 @@ main {
 }
 
 .admin-form,
-.admin-list-panel,
 .setup-form {
   display: grid;
   min-width: 0;
@@ -537,7 +533,6 @@ main {
   max-width: 760px;
 }
 
-.merchant-list,
 .version-list {
   display: grid;
   max-height: 620px;
@@ -550,10 +545,75 @@ main {
   gap: 24px;
 }
 
-.merchant-new-panel,
-.merchant-defaults .admin-list-panel {
+.merchant-default-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.merchant-default-card > summary {
+  display: flex;
+  min-height: 82px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 24px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.merchant-default-card > summary::-webkit-details-marker {
+  display: none;
+}
+
+.merchant-default-card > summary:hover {
+  background: var(--current-soft);
+}
+
+.merchant-default-card > summary::after {
+  content: "+";
+  color: var(--current);
+  font-family: "Azeret Mono", monospace;
+  font-size: 1.35rem;
+}
+
+.merchant-default-card[open] > summary::after {
+  content: "−";
+}
+
+.merchant-default-card[open] > summary {
+  border-bottom: 1px solid var(--border);
+}
+
+.merchant-default-card > summary > div {
+  min-width: 0;
+}
+
+.merchant-default-card > summary h2,
+.merchant-default-card > summary p {
+  margin: 0;
+}
+
+.merchant-card-count {
+  min-width: 30px;
+  margin-left: auto;
+  border-radius: 999px;
+  padding: 3px 8px;
+  color: var(--current);
+  background: var(--current-soft);
+  text-align: center;
+  font-family: "Azeret Mono", monospace;
+  font-size: 0.76rem;
+}
+
+.merchant-card-content {
   display: grid;
   gap: 16px;
+  padding: 20px 24px 24px;
+}
+
+.merchant-card-content > p {
+  margin: 0;
+  color: var(--muted);
 }
 
 .merchant-default-list {
@@ -561,12 +621,12 @@ main {
   border-top: 1px solid var(--border);
 }
 
-.merchant-defaults .admin-list-panel .merchant-default-list {
+.merchant-default-card:last-child .merchant-default-list {
   max-height: 620px;
   overflow-y: auto;
 }
 
-.merchant-new-panel .merchant-default-list {
+.merchant-default-card:not(:last-child) .merchant-default-list {
   max-height: 430px;
   overflow-y: auto;
 }
@@ -591,9 +651,7 @@ main {
 }
 
 .merchant-default-name small,
-.empty-list-message,
-.merchant-new-panel > div > p,
-.admin-list-panel > div > p {
+.empty-list-message {
   color: var(--muted);
 }
 
@@ -658,36 +716,6 @@ main {
   padding: 16px 4px;
 }
 
-.merchant-item {
-  display: flex;
-  min-height: 66px;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  border: 0;
-  border-bottom: 1px solid var(--border);
-  padding: 10px 4px;
-  text-align: left;
-  color: var(--ink);
-  background: transparent;
-  cursor: pointer;
-}
-
-.merchant-item:hover {
-  background: var(--surface);
-}
-
-.merchant-item.selected {
-  border-left: 3px solid var(--current);
-  padding-left: 10px;
-  background: var(--current-soft);
-}
-
-.merchant-item > span:first-child {
-  display: grid;
-}
-
-.merchant-item small,
 .field-help,
 .admin-form > div > p {
   color: var(--muted);
@@ -874,14 +902,33 @@ main {
 }
 
 .budget-summary {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 24px;
+  --summary-pace: var(--current);
+  display: grid;
+  gap: 18px;
   margin-top: 20px;
-  border-left: 4px solid var(--current);
+  border-left: 4px solid var(--summary-pace);
   padding: 18px 20px;
   background: var(--current-soft);
+}
+
+.budget-summary.pace-success {
+  --summary-pace: var(--success);
+}
+
+.budget-summary.pace-warning {
+  --summary-pace: var(--warning);
+}
+
+.budget-summary.pace-danger {
+  --summary-pace: var(--error);
+}
+
+.budget-summary-heading,
+.summary-progress-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
 }
 
 .budget-summary .eyebrow {
@@ -896,10 +943,63 @@ main {
   letter-spacing: -0.04em;
 }
 
-.budget-summary > p {
+.budget-summary-heading > p {
+  margin-bottom: 0;
   color: var(--muted);
   font-size: 0.85rem;
   text-align: right;
+}
+
+.budget-summary-progress {
+  display: grid;
+}
+
+.summary-progress-heading {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.summary-progress-heading strong {
+  color: var(--ink);
+  font-family: "Azeret Mono", monospace;
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+.summary-progress-track {
+  display: block;
+  width: 100%;
+  height: 12px;
+  overflow: hidden;
+  margin-top: 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--paper) 70%, var(--surface));
+}
+
+.summary-progress-track > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+}
+
+.summary-progress-track.total > span {
+  background: var(--summary-pace);
+}
+
+.remaining-heading {
+  margin-top: 14px;
+}
+
+.summary-progress-track.remaining > span {
+  background: var(--success);
+}
+
+.summary-progress-track.remaining.overspent {
+  background: color-mix(in srgb, var(--error) 24%, var(--paper));
+}
+
+.summary-progress-heading strong.negative {
+  color: var(--error);
 }
 
 .freshness {
@@ -1126,20 +1226,6 @@ main {
   border-radius: 999px;
   padding: 7px 10px;
   white-space: nowrap;
-}
-
-.transaction-list {
-  border-top: 1px solid var(--border);
-}
-
-.transaction-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 150px 150px;
-  align-items: center;
-  gap: 20px;
-  min-height: 78px;
-  border-bottom: 1px solid var(--border);
-  padding: 12px 4px;
 }
 
 .transaction-description {
@@ -1445,13 +1531,40 @@ main {
 
 .editor-fields {
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) auto auto minmax(260px, 1.5fr);
+  grid-template-columns: minmax(190px, 1fr) minmax(190px, 1fr) auto auto;
   align-items: end;
   gap: 16px;
 }
 
 .note-field {
-  grid-column: auto;
+  grid-column: 1 / -1;
+}
+
+.budget-date-field {
+  position: relative;
+}
+
+.budget-date-field small {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.74rem;
+}
+
+.inline-reset {
+  width: fit-content;
+  min-height: 30px;
+  margin-top: 3px;
+  border: 0;
+  padding: 2px 0;
+  color: var(--current);
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.76rem;
+}
+
+.inline-reset:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .check-field {
@@ -1538,8 +1651,14 @@ main {
     padding: 16px;
   }
 
-  .budget-summary > p {
+  .budget-summary-heading > p {
     text-align: left;
+  }
+
+  .budget-summary-heading,
+  .summary-progress-heading {
+    display: grid;
+    gap: 2px;
   }
 
   .month-navigation {
@@ -1557,7 +1676,6 @@ main {
     gap: 8px;
   }
 
-  .prototype-tag,
   .status {
     width: fit-content;
   }
@@ -1577,12 +1695,6 @@ main {
   .category-card:nth-child(-n + 2) {
     grid-column: auto;
     min-height: 224px;
-  }
-
-  .transaction-row {
-    grid-template-columns: 1fr auto;
-    gap: 10px 12px;
-    padding: 16px 4px;
   }
 
   .transaction-filters {

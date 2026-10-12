@@ -73,7 +73,6 @@ test_that("server saves configuration and refreshes affected screens", {
   server <- create_finance_app_server(transaction_maintenance_connection_factory)
 
   shiny::testServer(server, {
-    merchant_count_before <- length(output$configuration_screen$merchants)
     session$setInputs(transaction_filters = list(
       start_date = NULL,
       end_date = NULL,
@@ -81,21 +80,22 @@ test_that("server saves configuration and refreshes affected screens", {
     ))
 
     session$setInputs(configuration_save_request = list(
-      kind = "merchant",
+      kind = "merchant_default",
       request_id = "server-merchant-save",
-      rule_id = NULL,
-      display_name = "New merchant",
-      description_pattern = "^NEW MERCHANT$",
-      category_code = "food_living",
-      effective_date = "2026-05-01",
-      is_active = TRUE,
-      apply_existing = TRUE
+      merchant_description = "NEW MERCHANT",
+      category_code = "food_living"
     ))
 
     expect_equal(output$configuration_save_result$status, "saved")
-    expect_equal(length(output$configuration_screen$merchants), merchant_count_before + 1L)
-    expect_equal(output$transaction_screen$transactions[[1]]$category_code, "food_living")
-    expect_equal(output$transaction_screen$transactions[[1]]$merchant, "New merchant")
+    saved_default <- purrr::keep(
+      output$configuration_screen$merchant_defaults,
+      ~ identical(.x$display_name, "NEW MERCHANT")
+    )[[1]]
+    expect_equal(saved_default$category_code, "food_living")
+    expect_equal(
+      output$transaction_screen$transactions[[1]]$category_code,
+      "personal_discretionary"
+    )
   })
 })
 

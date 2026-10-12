@@ -141,6 +141,28 @@ format_category_card_contracts <- function(
   )
 }
 
+format_monthly_budget_totals <- function(
+  category_rows,
+  selected_month,
+  today = Sys.Date()
+) {
+  total_monthly_budget <- sum(category_rows$monthly_allocation)
+  net_spending <- sum(category_rows$net_spending)
+  rollover_total <- sum(category_rows$opening_balance)
+
+  list(
+    total_monthly_budget = total_monthly_budget,
+    net_spending = net_spending,
+    rollover_total = rollover_total,
+    pace_state = classify_budget_pace(
+      net_spending,
+      total_monthly_budget,
+      selected_month,
+      today
+    )
+  )
+}
+
 format_transaction_contracts <- function(transactions) {
   account_labels <- stats::setNames(
     overview_accounts()$label,
@@ -194,12 +216,22 @@ build_overview_screen_contract <- function(
     stop("Every category must use the same budget start month.", call. = FALSE)
   }
 
-  if (selected_month < budget_start_month) {
-    stop("Overview month cannot precede the budget start month.", call. = FALSE)
-  }
-
   if (selected_month > current_month) {
     stop("Overview month cannot be in the future.", call. = FALSE)
+  }
+
+  budget_versions <- read_database_budget_versions(connection)
+  transactions <- read_database_transactions(connection)
+  earliest_budget_month <- min(budget_versions$effective_month)
+  earliest_transaction_month <- if (nrow(transactions)) {
+    lubridate::floor_date(min(transactions$date), "month")
+  } else {
+    earliest_budget_month
+  }
+  overview_start_month <- max(earliest_budget_month, earliest_transaction_month)
+
+  if (selected_month < overview_start_month) {
+    stop("Overview month precedes the available budget history.", call. = FALSE)
   }
 
   category_index <- opening_balances |>
@@ -213,22 +245,47 @@ build_overview_screen_contract <- function(
     stop("Overview category is not supported.", call. = FALSE)
   }
 
-  category_rows <- build_database_rollover_ledger(
-    connection,
-    through_month = selected_month
-  ) |>
-    dplyr::filter(month == selected_month) |>
-    dplyr::left_join(category_index, by = "budget_category") |>
-    dplyr::arrange(sort_order) |>
-    dplyr::select(
-      category_code,
-      budget_category,
-      sort_order,
-      monthly_allocation,
-      net_spending,
-      opening_balance,
-      cumulative_rollover_balance
-    )
+  rollover_active <- selected_month >= budget_start_month
+  category_rows <- if (rollover_active) {
+    build_database_rollover_ledger(
+      connection,
+      through_month = selected_month
+    ) |>
+      dplyr::filter(month == selected_month) |>
+      dplyr::left_join(category_index, by = "budget_category") |>
+      dplyr::arrange(sort_order) |>
+      dplyr::select(
+        category_code,
+        budget_category,
+        sort_order,
+        monthly_allocation,
+        net_spending,
+        opening_balance,
+        cumulative_rollover_balance
+      )
+  } else {
+    month_after_selected <- seq.Date(selected_month, by = "month", length.out = 2)[[2]]
+    allocations <- budget_versions |>
+      dplyr::filter(effective_month <= selected_month) |>
+      dplyr::group_by(category_code) |>
+      dplyr::slice_max(effective_month, n = 1, with_ties = FALSE) |>
+      dplyr::ungroup() |>
+      dplyr::select(category_code, monthly_allocation)
+    spending <- transactions |>
+      dplyr::filter(date >= selected_month, date < month_after_selected) |>
+      dplyr::group_by(budget_category) |>
+      dplyr::summarize(net_spending = sum(budget_amount), .groups = "drop")
+
+    category_index |>
+      dplyr::left_join(allocations, by = "category_code") |>
+      dplyr::left_join(spending, by = "budget_category") |>
+      dplyr::mutate(
+        net_spending = dplyr::coalesce(net_spending, 0),
+        opening_balance = 0,
+        cumulative_rollover_balance = monthly_allocation - net_spending
+      ) |>
+      dplyr::arrange(sort_order)
+  }
 
   month_after_selected <- seq.Date(
     selected_month,
@@ -255,7 +312,7 @@ build_overview_screen_contract <- function(
   } else {
     selected_category_name <- selected_category_row$budget_category[[1]]
 
-    read_database_transactions(connection) |>
+    transactions |>
       dplyr::filter(
         date >= selected_month,
         date < month_after_selected,
@@ -274,7 +331,7 @@ build_overview_screen_contract <- function(
       )
   }
 
-  previous_month <- if (selected_month > budget_start_month) {
+  previous_month <- if (selected_month > overview_start_month) {
     seq.Date(selected_month, by = "-1 month", length.out = 2)[[2]]
   } else {
     NULL
@@ -291,8 +348,15 @@ build_overview_screen_contract <- function(
     month_label = format(selected_month, "%B %Y"),
     current_month = as.character(current_month),
     budget_start_month = as.character(budget_start_month),
+    overview_start_month = as.character(overview_start_month),
+    rollover_active = rollover_active,
     previous_month = format_optional_date(previous_month),
     next_month = format_optional_date(next_month),
+    monthly_totals = format_monthly_budget_totals(
+      category_rows,
+      selected_month,
+      today
+    ),
     categories = format_category_card_contracts(
       category_rows,
       selected_month,

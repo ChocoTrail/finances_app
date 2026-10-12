@@ -3,10 +3,6 @@ import type { FormEvent, ReactNode } from "react";
 const { React } = window.shinyreact;
 
 type CategoryOption = { value: string; label: string; sort_order: number };
-type Merchant = {
-  display_name: string;
-  category_code: string;
-};
 type MerchantDefault = { display_name: string; first_seen_date: string; category_code: string | null };
 type Allocation = { category_code: string; category: string; amount: number };
 type BudgetVersion = {
@@ -21,7 +17,6 @@ export type ConfigurationScreen = {
   current_month: string;
   default_effective_month: string;
   categories: CategoryOption[];
-  merchants: Merchant[];
   merchant_defaults: MerchantDefault[];
   new_merchants: MerchantDefault[];
   budget_versions: BudgetVersion[];
@@ -78,10 +73,20 @@ function MerchantAdmin({ screen, onSave, result }: {
   const filtered = [...screen.merchant_defaults]
     .sort((a, b) => a.display_name.localeCompare(b.display_name))
     .filter((merchant) => merchant.display_name.toLowerCase().includes(search.trim().toLowerCase()));
+  const withoutDefaults = screen.merchant_defaults.filter((merchant) => !merchant.category_code);
   const matchingResult = result?.request_id === submittedRequestId ? result : null;
 
   React.useEffect(() => {
-    if (matchingResult) setPendingKey(null);
+    if (matchingResult) {
+      if (matchingResult.status === "error" && pendingKey) {
+        setChoices((current) => {
+          const next = { ...current };
+          delete next[pendingKey];
+          return next;
+        });
+      }
+      setPendingKey(null);
+    }
   }, [matchingResult]);
 
   const saveChoice = (key: string, categoryCode: string, details: Record<string, unknown>) => {
@@ -106,30 +111,48 @@ function MerchantAdmin({ screen, onSave, result }: {
     </div>;
   };
 
-  return <section className="merchant-defaults" aria-labelledby="merchant-admin-title">
-    <div className="panel merchant-new-panel">
-      <div><p className="eyebrow">Recently seen</p><h2>New since last month</h2><p>These merchants first appeared since the start of last month.</p></div>
-      {screen.new_merchants.length
-        ? <div className="merchant-default-list">{screen.new_merchants.map((merchant) => radioRow(
-          `new-${merchant.display_name}`, merchant.display_name, merchant.category_code,
-          { merchant_description: merchant.display_name },
-          `${merchant.category_code === "rainy_day" ? "Assign Rainy Day individually · " : !merchant.category_code ? "Choose a default · " : ""}First seen ${formatMonth(`${merchant.first_seen_date.slice(0, 7)}-01`)}`,
-        ))}</div>
-        : <p className="empty-list-message">No new merchants need a default.</p>}
-    </div>
-    <div className="panel admin-list-panel">
-      <div><p className="eyebrow">Future imports</p><h2 id="merchant-admin-title">All merchant defaults</h2><p>Choose what each merchant should use going forward. Past transactions will not change.</p></div>
-      <label className="text-field"><span>Search merchants</span><input value={search} onChange={(event) => setSearch(event.target.value)} type="search" /></label>
-      <div className="merchant-default-list">
-        {filtered.map((merchant) => radioRow(
-          `all-${merchant.display_name}`, merchant.display_name, merchant.category_code,
-          { merchant_description: merchant.display_name },
-          merchant.category_code === "rainy_day" ? "Assign Rainy Day to individual transactions" : !merchant.category_code ? "Choose a default" : undefined,
-        ))}
-        {!filtered.length && <p className="empty-list-message">No merchants match that search.</p>}
+  return <section className="merchant-defaults" aria-label="Merchant defaults">
+    <details className="panel merchant-default-card" open>
+      <summary><div><p className="eyebrow">Recently seen</p><h2>New since last month</h2></div><span className="merchant-card-count">{screen.new_merchants.length}</span></summary>
+      <div className="merchant-card-content">
+        <p>These merchants first appeared since the start of last month.</p>
+        {screen.new_merchants.length
+          ? <div className="merchant-default-list">{screen.new_merchants.map((merchant) => radioRow(
+            `new-${merchant.display_name}`, merchant.display_name, merchant.category_code,
+            { merchant_description: merchant.display_name },
+            `${merchant.category_code === "rainy_day" ? "Assign Rainy Day individually · " : !merchant.category_code ? "Choose a default · " : ""}First seen ${formatMonth(`${merchant.first_seen_date.slice(0, 7)}-01`)}`,
+          ))}</div>
+          : <p className="empty-list-message">No merchants first appeared in this period.</p>}
       </div>
-      <SaveNotice result={matchingResult} />
-    </div>
+    </details>
+    <details className="panel merchant-default-card" open>
+      <summary><div><p className="eyebrow">Needs attention</p><h2>Without a default</h2></div><span className="merchant-card-count">{withoutDefaults.length}</span></summary>
+      <div className="merchant-card-content">
+        <p>Choose a category for future transactions from these merchants.</p>
+        {withoutDefaults.length
+          ? <div className="merchant-default-list">{withoutDefaults.map((merchant) => radioRow(
+            `missing-${merchant.display_name}`, merchant.display_name, null,
+            { merchant_description: merchant.display_name }, "Choose a default",
+          ))}</div>
+          : <p className="empty-list-message">Every merchant has a default.</p>}
+      </div>
+    </details>
+    <details className="panel merchant-default-card">
+      <summary><div><p className="eyebrow">Future imports</p><h2>All merchants</h2></div><span className="merchant-card-count">{screen.merchant_defaults.length}</span></summary>
+      <div className="merchant-card-content">
+        <p>Choose what each merchant should use going forward. Past transactions will not change.</p>
+        <label className="text-field"><span>Search merchants</span><input value={search} onChange={(event) => setSearch(event.target.value)} type="search" /></label>
+        <div className="merchant-default-list">
+          {filtered.map((merchant) => radioRow(
+            `all-${merchant.display_name}`, merchant.display_name, merchant.category_code,
+            { merchant_description: merchant.display_name },
+            merchant.category_code === "rainy_day" ? "Assign Rainy Day to individual transactions" : !merchant.category_code ? "Choose a default" : undefined,
+          ))}
+          {!filtered.length && <p className="empty-list-message">No merchants match that search.</p>}
+        </div>
+        <SaveNotice result={matchingResult} />
+      </div>
+    </details>
   </section>;
 }
 
@@ -187,7 +210,7 @@ function RolloverAdmin({ screen, onSave, result }: {
   const matchingResult = result?.request_id === submittedRequestId ? result : null;
   const isSaving = Boolean(submittedRequestId) && !matchingResult;
   return <form className="panel admin-form setup-form" onSubmit={submit}>
-    <div><p className="eyebrow">Rollover settings</p><h2>Choose when rollover begins</h2><p>The start month is the earliest month shown in Overview. Every later month carries its remaining balance forward from this point.</p></div>
+    <div><p className="eyebrow">Rollover settings</p><h2>Choose when rollover begins</h2><p>Balances begin carrying forward in this month. Earlier transaction months remain available in Overview without rollover.</p></div>
     <label className="text-field"><span>Rollover start month</span><input max={screen.current_month.slice(0, 7)} min={earliestBudgetMonth} required type="month" value={startMonth} onChange={(e) => setStartMonth(e.target.value)} /></label>
     <div className="notice notice-warning"><strong>Changing the start month recalculates later rollover balances.</strong> It does not change transactions or monthly budget versions.</div>
     <p className="field-help">The selected month must have a monthly budget version in effect.</p>

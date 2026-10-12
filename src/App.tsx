@@ -50,6 +50,14 @@ type OverviewScreen = {
   month_label: string;
   current_month: string;
   budget_start_month: string;
+  overview_start_month: string;
+  rollover_active: boolean;
+  monthly_totals: {
+    total_monthly_budget: number;
+    net_spending: number;
+    rollover_total: number;
+    pace_state: "success" | "warning" | "danger";
+  };
   previous_month: string | null;
   next_month: string | null;
   categories: CategoryCard[];
@@ -121,6 +129,12 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
   timeZone: "UTC",
 });
 
+const fullMonthFormatter = new Intl.DateTimeFormat("en-US", {
+  month: "long",
+  year: "numeric",
+  timeZone: "UTC",
+});
+
 const overviewCategoryOrder = [
   "food_living",
   "personal_discretionary",
@@ -138,6 +152,10 @@ function localCurrentMonth() {
 
 function formatDate(value: string) {
   return dateFormatter.format(new Date(`${value}T00:00:00Z`));
+}
+
+function formatMonth(value: string) {
+  return fullMonthFormatter.format(new Date(`${value}T00:00:00Z`));
 }
 
 function Metric({ label, value }: { label: string; value: string | number }) {
@@ -235,9 +253,10 @@ function AccountFreshnessList({ accounts: freshness }: { accounts: AccountFreshn
   );
 }
 
-function CategoryCardView({ category, monthLabel, onSelect }: {
+function CategoryCardView({ category, monthLabel, rolloverActive, onSelect }: {
   category: CategoryCard;
   monthLabel: string;
+  rolloverActive: boolean;
   onSelect: (categoryCode: string) => void;
 }) {
   const rawProgress = category.monthly_allocation > 0
@@ -293,7 +312,7 @@ function CategoryCardView({ category, monthLabel, onSelect }: {
         <strong>{currency.format(category.monthly_allocation)}</strong>
       </span>
       <span className="rollover-balance">
-        <span>{category.balance_state === "deficit" ? "Balance with rollover" : "Available with rollover"}</span>
+        <span>{rolloverActive ? (category.balance_state === "deficit" ? "Balance with rollover" : "Available with rollover") : "Remaining this month"}</span>
         <strong>{currency.format(category.available_balance)}</strong>
       </span>
       <span className="card-link">View transactions <span aria-hidden="true">→</span></span>
@@ -306,10 +325,33 @@ function OverviewView({ overview, onMonthChange, onSelectCategory }: {
   onMonthChange: (month: string) => void;
   onSelectCategory: (categoryCode: string) => void;
 }) {
-  const totalMonthlyBudget = overview.categories.reduce(
-    (total, category) => total + category.monthly_allocation,
+  const { total_monthly_budget: totalMonthlyBudget, net_spending: totalSpending,
+    rollover_total: rolloverTotal, pace_state: totalPace } = overview.monthly_totals;
+  const rawTotalProgress = totalMonthlyBudget > 0 ? (totalSpending / totalMonthlyBudget) * 100 : 0;
+  const totalProgress = Math.max(0, Math.min(100, rawTotalProgress));
+  const displayedTotalProgress = Math.max(0, rawTotalProgress);
+  const totalProgressText = displayedTotalProgress > 100 && displayedTotalProgress < 101
+    ? `${displayedTotalProgress.toFixed(1)}%`
+    : `${displayedTotalProgress.toFixed(0)}%`;
+  const totalSpendingText = totalSpending < 0
+    ? `${currency.format(Math.abs(totalSpending))} net credit`
+    : `${currency.format(totalSpending)} net spent`;
+  const availableWithRollover = totalMonthlyBudget + rolloverTotal;
+  const remainingWithRollover = availableWithRollover - totalSpending;
+  const remainingProgress = availableWithRollover > 0
+    ? Math.max(0, Math.min(100, (remainingWithRollover / availableWithRollover) * 100))
+    : 0;
+  const remainingProgressMaximum = Math.max(0, availableWithRollover);
+  const remainingProgressValue = Math.max(
     0,
+    Math.min(remainingProgressMaximum, remainingWithRollover),
   );
+  const remainingText = remainingWithRollover < 0
+    ? `${currency.format(Math.abs(remainingWithRollover))} over`
+    : `${currency.format(remainingWithRollover)} left`;
+  const rolloverContext = rolloverTotal < 0
+    ? `${currency.format(Math.abs(rolloverTotal))} rollover deficit`
+    : `${currency.format(rolloverTotal)} rollover included`;
   const orderedCategories = [...overview.categories].sort((left, right) => {
     const leftIndex = overviewCategoryOrder.indexOf(left.category_code);
     const rightIndex = overviewCategoryOrder.indexOf(right.category_code);
@@ -335,7 +377,9 @@ function OverviewView({ overview, onMonthChange, onSelectCategory }: {
             <p className="eyebrow">Monthly budget by category</p>
             <h2 id="categories-title">{overview.month_label}</h2>
           </div>
-          <p>Rollover balances are shown as supporting context.</p>
+          <p>{overview.rollover_active
+            ? "Rollover balances are shown as supporting context."
+            : `Rollover begins ${formatMonth(overview.budget_start_month)}; this month stands alone.`}</p>
         </div>
         <div className="category-grid">
           {orderedCategories.map((category) => (
@@ -343,16 +387,42 @@ function OverviewView({ overview, onMonthChange, onSelectCategory }: {
               category={category}
               key={category.category_code}
               monthLabel={overview.month_label}
+              rolloverActive={overview.rollover_active}
               onSelect={onSelectCategory}
             />
           ))}
         </div>
-        <section className="budget-summary" aria-labelledby="budget-total-title">
-          <div>
+        <section className={`budget-summary pace-${totalPace}`} aria-labelledby="budget-total-title">
+          <div className="budget-summary-heading">
+            <div>
             <p className="eyebrow">Total monthly budget</p>
             <h2 id="budget-total-title">{currency.format(totalMonthlyBudget)}</h2>
+            </div>
+            <p>{overview.month_label}</p>
           </div>
-          <p>{overview.month_label}</p>
+          <div className="budget-summary-progress">
+            <div className="summary-progress-heading">
+              <span>Monthly progress</span>
+              <strong>{totalProgressText} · {totalSpendingText}</strong>
+            </div>
+            <span aria-label={`${totalSpendingText} of ${currency.format(totalMonthlyBudget)} monthly budget`}
+              aria-valuemax={100} aria-valuemin={0} aria-valuenow={Math.round(totalProgress)}
+              className="summary-progress-track total" role="progressbar">
+              <span style={{ width: `${totalProgress}%` }} />
+            </span>
+            <div className="summary-progress-heading remaining-heading">
+              <span>Remaining with rollover</span>
+              <strong className={remainingWithRollover < 0 ? "negative" : undefined}>
+                {remainingText} of {currency.format(availableWithRollover)} · {rolloverContext}
+              </strong>
+            </div>
+            <span aria-label={`${remainingText} from ${currency.format(availableWithRollover)} available, including ${currency.format(rolloverTotal)} rollover`}
+              aria-valuemax={remainingProgressMaximum} aria-valuemin={0}
+              aria-valuenow={remainingProgressValue}
+              className={`summary-progress-track remaining${remainingWithRollover < 0 ? " overspent" : ""}`} role="progressbar">
+              <span style={{ width: `${remainingProgress}%` }} />
+            </span>
+          </div>
         </section>
       </section>
     </main>
